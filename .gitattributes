@@ -1,0 +1,11 @@
+# Normaliza finales de linea: el repo guarda LF, el working copy usa lo nativo.
+# Sin esto, en Windows cada archivo aparece modificado al clonar.
+* text=auto eol=lf
+
+*.png binary
+*.jpg binary
+*.jpeg binary
+*.gif binary
+*.ico binary
+*.keystore binary
+*.jks binary
