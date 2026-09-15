@@ -28,28 +28,28 @@ export function getTag(id: number): Tag | null {
 }
 
 /** Returns the existing tag when the name is already taken, so typing it again just reuses it. */
-export function createTag(name: string): Tag {
+export function createTag(name: string, color: string | null = null): Tag {
   const existing = db.select().from(tags).where(sameName(name)).get();
   if (existing) return existing;
 
   const timestamp = Date.now();
   return db
     .insert(tags)
-    .values({ uuid: randomUUID(), name: name.trim(), createdAt: timestamp, updatedAt: timestamp })
+    .values({ uuid: randomUUID(), name: name.trim(), color, createdAt: timestamp, updatedAt: timestamp })
     .returning()
     .get();
 }
 
-export function renameTag(id: number, name: string) {
+export function updateTag(id: number, changes: { name: string; color: string | null }) {
   const clash = db
     .select()
     .from(tags)
-    .where(and(sameName(name), ne(tags.id, id)))
+    .where(and(sameName(changes.name), ne(tags.id, id)))
     .get();
-  if (clash) throw new TagNameTakenError(name);
+  if (clash) throw new TagNameTakenError(changes.name);
 
   db.update(tags)
-    .set({ name: name.trim(), updatedAt: Date.now() })
+    .set({ name: changes.name.trim(), color: changes.color, updatedAt: Date.now() })
     .where(eq(tags.id, id))
     .run();
 }

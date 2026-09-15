@@ -1,3 +1,5 @@
+import { sanitizeFolderIcon, sanitizeTagColor } from './appearance';
+
 export const BACKUP_APP = 'renglon';
 export const BACKUP_VERSION = 1;
 
@@ -5,6 +7,7 @@ export interface BackupFolder {
   uuid: string;
   name: string;
   parentUuid: string | null;
+  icon: string | null;
   createdAt: number;
   updatedAt: number;
 }
@@ -57,6 +60,10 @@ function field<T>(record: Json, name: string, check: (v: unknown) => v is T, whe
   return value;
 }
 
+function optional<T>(record: Json, name: string, check: (v: unknown) => v is T, where: string): T | undefined {
+  return record[name] === undefined ? undefined : field(record, name, check, where);
+}
+
 const isString = (v: unknown): v is string => typeof v === 'string';
 const isNumber = (v: unknown): v is number => typeof v === 'number' && Number.isFinite(v);
 const isBoolean = (v: unknown): v is boolean => typeof v === 'boolean';
@@ -88,6 +95,8 @@ export function parseBackup(raw: unknown): Backup {
       uuid: field(item, 'uuid', isString, where),
       name: field(item, 'name', isString, where),
       parentUuid: field(item, 'parentUuid', isNullableString, where),
+      // Optional because backups made before folders had icons do not have the field.
+      icon: sanitizeFolderIcon(optional(item, 'icon', isNullableString, where) ?? null),
       createdAt: field(item, 'createdAt', isNumber, where),
       updatedAt: field(item, 'updatedAt', isNumber, where),
     };
@@ -98,7 +107,7 @@ export function parseBackup(raw: unknown): Backup {
     return {
       uuid: field(item, 'uuid', isString, where),
       name: field(item, 'name', isString, where),
-      color: field(item, 'color', isNullableString, where),
+      color: sanitizeTagColor(field(item, 'color', isNullableString, where)),
       createdAt: field(item, 'createdAt', isNumber, where),
       updatedAt: field(item, 'updatedAt', isNumber, where),
     };
@@ -134,6 +143,19 @@ export interface MergePlan {
   insert: string[];
   update: string[];
   skip: string[];
+}
+
+/**
+ * The trash state a note ends up with after an import. `local` is undefined when the note does
+ * not exist yet, and then the backup's state is kept as is.
+ *
+ * For existing notes, a backup can bring a note back from the trash but never sends one there:
+ * restoring a backup is about recovering notes, and silently hiding a note the user is still
+ * working with would look like data loss.
+ */
+export function mergedDeletedAt(local: number | null | undefined, incoming: number | null): number | null {
+  if (local === undefined) return incoming;
+  return incoming === null ? null : local;
 }
 
 /**

@@ -36,7 +36,9 @@ afterwards: the user is using the app, and whatever changes on screen is their d
   when a tag changes. Do not add Zustand/Redux without a concrete reason either: it would
   duplicate the source of truth.
 - **UI**: `react-native-paper` (Material 3) with the "notebook" palette in `src/theme/`. Titles
-  use `titleFont`. Transient feedback goes through the app-wide `useSnackbar()`.
+  use `titleFont`. Transient feedback goes through the app-wide `useSnackbar()`. Folder icons and
+  tag colors are stored as keys from `src/lib/appearance.ts`, never as raw icon names or hex
+  values; the theme maps each tag color to its light and dark variant (`tagColors`).
 - **UI strings**: always through `t()` / `tp()` from `src/i18n`, never hardcoded. The app follows
   the phone language: English for English, Spanish for everything else. Add keys to `es.ts`
   first; `en.ts` is typed against it, so a missing translation fails the typecheck. Spanish copy
@@ -78,6 +80,12 @@ afterwards: the user is using the app, and whatever changes on screen is their d
   names and commit messages.
 - Comments explain **why**, not what. If the code already says it, do not comment it.
 - Dates in SQLite: epoch-ms integers, never ISO strings.
+- **Until the first release**, schema changes are folded into the initial migration instead of
+  adding new ones: delete the files in `drizzle/`, run `npm run db:generate`, recreate the FTS
+  migration with `npx drizzle-kit generate --custom --name notes_fts5` and paste its SQL back, then
+  clear the app data (`adb shell pm clear com.eduardopaulcs.renglon`), because a database that
+  already applied the old migrations would try to create the tables again. Once the app is
+  published, applied migrations are never edited: every change is a new migration.
 - Deleting notes: soft delete (`deleted_at`) with an Undo snackbar. A hard `DELETE` happens only
   when deleting forever from the trash, and when discarding a note left completely empty.
 - Imported files are untrusted: validate them fully (`src/lib/backup-format.ts`) before writing

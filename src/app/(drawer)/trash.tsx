@@ -9,16 +9,28 @@ import { EmptyState } from '@/components/EmptyState';
 import { NoteCard } from '@/components/NoteCard';
 import { useSnackbar } from '@/components/SnackbarProvider';
 import { useLiveData } from '@/db/live';
-import { deleteNotesForever, emptyTrash, listNotes, restoreNotes, type NoteListItem } from '@/db/queries/notes';
+import {
+  NOTE_PAGE_SIZE,
+  countTrashed,
+  deleteNotesForever,
+  emptyTrash,
+  listNotes,
+  restoreNotes,
+  type NoteListItem,
+} from '@/db/queries/notes';
 import { formatDate, t, tp } from '@/i18n';
-import { stripMarkdown } from '@/lib/markdown';
+import { notePreview } from '@/lib/markdown';
 import { titleFont, useAppTheme } from '@/theme';
 
 export default function TrashScreen() {
   const theme = useAppTheme();
   const navigation = useNavigation<DrawerNavigationProp<Record<string, object | undefined>>>();
   const showSnackbar = useSnackbar();
-  const notes = useLiveData(() => listNotes({ trashed: true }), ['notes', 'note_tags', 'tags', 'folders'], []) ?? [];
+  const [limit, setLimit] = useState(NOTE_PAGE_SIZE);
+  const page = useLiveData(() => listNotes({ trashed: true }, limit), ['notes', 'note_tags', 'tags', 'folders'], [limit]);
+  const notes = page?.items ?? [];
+  // Counted separately because the list may only hold the first page.
+  const trashedCount = useLiveData(countTrashed, ['notes'], []) ?? 0;
 
   const [active, setActive] = useState<NoteListItem | null>(null);
   const [confirm, setConfirm] = useState<'empty' | 'note' | null>(null);
@@ -48,6 +60,10 @@ export default function TrashScreen() {
         keyExtractor={(note) => String(note.id)}
         contentContainerStyle={styles.list}
         ItemSeparatorComponent={() => <View style={styles.separator} />}
+        onEndReached={() => {
+          if (page?.hasMore) setLimit(limit + NOTE_PAGE_SIZE);
+        }}
+        onEndReachedThreshold={0.5}
         ListEmptyComponent={<EmptyState icon="trash-can-outline" title={t('trash.empty')} />}
         renderItem={({ item }) => (
           <NoteCard
@@ -64,7 +80,7 @@ export default function TrashScreen() {
           {active?.body ? (
             <Dialog.Content>
               <Text variant="bodyMedium" numberOfLines={4}>
-                {stripMarkdown(active.body)}
+                {notePreview(active.body)}
               </Text>
             </Dialog.Content>
           ) : null}
@@ -93,11 +109,11 @@ export default function TrashScreen() {
       <ConfirmDialog
         visible={confirm === 'empty'}
         title={t('trash.emptyAction')}
-        message={tp('trash.emptyConfirm', notes.length)}
+        message={tp('trash.emptyConfirm', trashedCount)}
         confirmLabel={t('trash.emptyAction')}
         onDismiss={() => setConfirm(null)}
         onConfirm={() => {
-          const deleted = notes.length;
+          const deleted = trashedCount;
           emptyTrash();
           setConfirm(null);
           showSnackbar(tp('trash.deleted', deleted));

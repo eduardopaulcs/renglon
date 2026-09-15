@@ -19,12 +19,12 @@ interface SwipeToTrashProps {
  * tap to confirm because the snackbar that follows offers Undo, which is faster and less
  * annoying than a confirmation for a recoverable action.
  */
-function TrashAction({ align }: { align: 'flex-start' | 'flex-end' }) {
+function TrashAction() {
   const theme = useAppTheme();
   return (
     <View
       accessibilityLabel={t('common.delete')}
-      style={[styles.action, { alignItems: align, backgroundColor: theme.colors.tertiary }]}>
+      style={[styles.action, { backgroundColor: theme.colors.tertiary }]}>
       <Icon source="trash-can-outline" size={24} color={theme.colors.onTertiary} />
     </View>
   );
@@ -37,8 +37,8 @@ export function SwipeToTrash({ enabled, onTrash, children }: SwipeToTrashProps) 
       friction={1.5}
       leftThreshold={ACTION_WIDTH / 2}
       rightThreshold={ACTION_WIDTH / 2}
-      renderLeftActions={() => <TrashAction align="flex-start" />}
-      renderRightActions={() => <TrashAction align="flex-end" />}
+      renderLeftActions={() => <TrashAction />}
+      renderRightActions={() => <TrashAction />}
       onSwipeableOpen={onTrash}
       containerStyle={styles.container}>
       {children}
@@ -48,5 +48,5 @@ export function SwipeToTrash({ enabled, onTrash, children }: SwipeToTrashProps) 
 
 const styles = StyleSheet.create({
   container: { borderRadius: 14 },
-  action: { width: ACTION_WIDTH, justifyContent: 'center', paddingHorizontal: 28, borderRadius: 14 },
+  action: { width: ACTION_WIDTH, alignItems: 'center', justifyContent: 'center', borderRadius: 14 },
 });

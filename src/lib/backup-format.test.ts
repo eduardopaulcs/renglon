@@ -1,4 +1,4 @@
-import { BackupFormatError, parseBackup, planMerge } from './backup-format';
+import { BackupFormatError, mergedDeletedAt, parseBackup, planMerge } from './backup-format';
 
 const validBackup = () => ({
   app: 'renglon',
@@ -29,6 +29,21 @@ describe('parseBackup', () => {
     expect(parsed.folders).toHaveLength(1);
   });
 
+  it('accepts folders without an icon and drops unknown icons and colors', () => {
+    const backup = validBackup();
+    const parsed = parseBackup({
+      ...backup,
+      folders: [
+        ...backup.folders,
+        { ...backup.folders[0], uuid: 'f2', icon: 'not-an-icon' },
+        { ...backup.folders[0], uuid: 'f3', icon: 'home-outline' },
+      ],
+      tags: [{ ...backup.tags[0], color: '#FF0000' }],
+    });
+    expect(parsed.folders.map((folder) => folder.icon)).toEqual([null, null, 'home-outline']);
+    expect(parsed.tags[0].color).toBeNull();
+  });
+
   it('rejects files from other apps', () => {
     expect(() => parseBackup({ ...validBackup(), app: 'other' })).toThrow(BackupFormatError);
   });
@@ -46,6 +61,22 @@ describe('parseBackup', () => {
   it('rejects non-objects', () => {
     expect(() => parseBackup(null)).toThrow(BackupFormatError);
     expect(() => parseBackup([])).toThrow(BackupFormatError);
+  });
+});
+
+describe('mergedDeletedAt', () => {
+  it('keeps the backup state for notes that do not exist yet', () => {
+    expect(mergedDeletedAt(undefined, 5)).toBe(5);
+    expect(mergedDeletedAt(undefined, null)).toBeNull();
+  });
+
+  it('takes a trashed note out of the trash when the backup has it active', () => {
+    expect(mergedDeletedAt(7, null)).toBeNull();
+  });
+
+  it('never sends a note to the trash', () => {
+    expect(mergedDeletedAt(null, 9)).toBeNull();
+    expect(mergedDeletedAt(7, 9)).toBe(7);
   });
 });
 

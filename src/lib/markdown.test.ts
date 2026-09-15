@@ -1,4 +1,12 @@
-import { applyFormat, noteToMarkdown, safeFileName, stripMarkdown } from './markdown';
+import {
+  PREVIEW_SOURCE_LENGTH,
+  applyFormat,
+  noteToMarkdown,
+  noteToPlainText,
+  notePreview,
+  safeFileName,
+  stripMarkdown,
+} from './markdown';
 
 describe('noteToMarkdown', () => {
   it('uses the title as the top heading', () => {
@@ -17,6 +25,31 @@ describe('safeFileName', () => {
 
   it('falls back when nothing usable is left', () => {
     expect(safeFileName('???', 'note', 'md')).toBe('note.md');
+  });
+});
+
+describe('noteToPlainText', () => {
+  it('keeps line breaks and turns list markers into symbols', () => {
+    expect(noteToPlainText('Groceries', '## Today\n- milk\n- [ ] eggs\n- [x] bread\n1. first')).toBe(
+      'Groceries\n\nToday\n• milk\n☐ eggs\n☑ bread\n1. first'
+    );
+  });
+
+  it('removes inline syntax and code fences but keeps the code', () => {
+    expect(noteToPlainText('', '**bold** [docs](https://x.y)\n```\nnpm test\n```')).toBe('bold docs\n\nnpm test');
+  });
+
+  it('omits the title for untitled notes', () => {
+    expect(noteToPlainText(' ', '> quoted')).toBe('quoted');
+  });
+});
+
+describe('notePreview', () => {
+  it('only reads the start of long bodies', () => {
+    const body = `**start** ${'word '.repeat(10_000)}`;
+    const preview = notePreview(body);
+    expect(preview.startsWith('start word')).toBe(true);
+    expect(preview.length).toBeLessThanOrEqual(PREVIEW_SOURCE_LENGTH);
   });
 });
 

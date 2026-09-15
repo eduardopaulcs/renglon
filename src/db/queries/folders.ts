@@ -16,18 +16,18 @@ export function getFolder(id: number): Folder | null {
   return db.select().from(folders).where(eq(folders.id, id)).get() ?? null;
 }
 
-export function createFolder(name: string): Folder {
+export function createFolder(name: string, icon: string | null = null): Folder {
   const timestamp = Date.now();
   return db
     .insert(folders)
-    .values({ uuid: randomUUID(), name: name.trim(), createdAt: timestamp, updatedAt: timestamp })
+    .values({ uuid: randomUUID(), name: name.trim(), icon, createdAt: timestamp, updatedAt: timestamp })
     .returning()
     .get();
 }
 
-export function renameFolder(id: number, name: string) {
+export function updateFolder(id: number, changes: { name: string; icon: string | null }) {
   db.update(folders)
-    .set({ name: name.trim(), updatedAt: Date.now() })
+    .set({ name: changes.name.trim(), icon: changes.icon, updatedAt: Date.now() })
     .where(eq(folders.id, id))
     .run();
 }

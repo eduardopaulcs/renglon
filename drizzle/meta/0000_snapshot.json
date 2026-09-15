@@ -1,7 +1,7 @@
 {
   "version": "6",
   "dialect": "sqlite",
-  "id": "b3a2ae53-eeba-476d-9a2d-1607892d2cda",
+  "id": "6943ea4f-a4e9-45ce-910a-712734a1871c",
   "prevId": "00000000-0000-0000-0000-000000000000",
   "tables": {
     "folders": {
@@ -26,6 +26,13 @@
           "type": "text",
           "primaryKey": false,
           "notNull": true,
+          "autoincrement": false
+        },
+        "icon": {
+          "name": "icon",
+          "type": "text",
+          "primaryKey": false,
+          "notNull": false,
           "autoincrement": false
         },
         "parent_id": {

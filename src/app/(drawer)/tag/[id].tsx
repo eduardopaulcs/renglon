@@ -1,19 +1,20 @@
 import { router, useLocalSearchParams } from 'expo-router';
 import { useEffect, useState } from 'react';
 
+import { TagColorPicker } from '@/components/AppearancePicker';
 import { ConfirmDialog } from '@/components/ConfirmDialog';
 import { NameDialog } from '@/components/NameDialog';
 import { NotesScreen } from '@/components/NotesScreen';
 import { useLiveData } from '@/db/live';
-import { TagNameTakenError, deleteTag, getTag, renameTag } from '@/db/queries/tags';
+import { TagNameTakenError, deleteTag, getTag, updateTag } from '@/db/queries/tags';
 import { t } from '@/i18n';
 
 export default function TagScreen() {
   const { id } = useLocalSearchParams<{ id: string }>();
   const tagId = Number(id);
   const tag = useLiveData(() => getTag(tagId), ['tags'], [tagId]);
-  const [dialog, setDialog] = useState<'rename' | 'delete' | null>(null);
-  const [renameError, setRenameError] = useState<string | null>(null);
+  const [dialog, setDialog] = useState<'edit' | 'delete' | null>(null);
+  const [editError, setEditError] = useState<string | null>(null);
 
   // `undefined` means still loading; `null` means the tag no longer exists.
   useEffect(() => {
@@ -22,7 +23,7 @@ export default function TagScreen() {
 
   const closeDialog = () => {
     setDialog(null);
-    setRenameError(null);
+    setEditError(null);
   };
 
   return (
@@ -32,25 +33,27 @@ export default function TagScreen() {
         tagId={tagId}
         emptyText={t('notes.emptyTag')}
         menu={[
-          { label: t('tags.rename'), onPress: () => setDialog('rename') },
+          { label: t('tags.edit'), onPress: () => setDialog('edit') },
           { label: t('tags.delete'), onPress: () => setDialog('delete') },
         ]}
       />
       <NameDialog
-        visible={dialog === 'rename'}
-        title={t('tags.rename')}
+        visible={dialog === 'edit'}
+        title={t('tags.edit')}
         placeholder={t('tags.namePlaceholder')}
         confirmLabel={t('common.save')}
         initialValue={tag?.name}
-        error={renameError}
+        initialOption={tag?.color}
+        renderOption={(value, onChange) => <TagColorPicker value={value} onChange={onChange} />}
+        error={editError}
         onDismiss={closeDialog}
-        onSubmit={(name) => {
+        onSubmit={(name, color) => {
           try {
-            renameTag(tagId, name);
+            updateTag(tagId, { name, color });
             closeDialog();
           } catch (error) {
             if (!(error instanceof TagNameTakenError)) throw error;
-            setRenameError(t('tags.nameTaken'));
+            setEditError(t('tags.nameTaken'));
           }
         }}
       />

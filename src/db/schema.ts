@@ -30,6 +30,8 @@ export const folders = sqliteTable(
     id: integer('id').primaryKey({ autoIncrement: true }),
     uuid: text('uuid').notNull().unique(),
     name: text('name').notNull(),
+    /** A key from FOLDER_ICONS in src/lib/appearance.ts; NULL means the default folder icon. */
+    icon: text('icon'),
     // Self-reference: allows nested folders. onDelete cascade removes the whole subtree.
     parentId: integer('parent_id').references((): AnySQLiteColumn => folders.id, { onDelete: 'cascade' }),
     ...timestamps,
@@ -64,7 +66,7 @@ export const tags = sqliteTable('tags', {
   id: integer('id').primaryKey({ autoIncrement: true }),
   uuid: text('uuid').notNull().unique(),
   name: text('name').notNull().unique(),
-  /** Optional hex (#RRGGBB); when NULL the UI derives a color from the name. */
+  /** A key from TAG_COLORS in src/lib/appearance.ts; NULL means the neutral tag color. */
   color: text('color'),
   ...timestamps,
 });

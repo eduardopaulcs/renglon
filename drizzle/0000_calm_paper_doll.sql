@@ -2,6 +2,7 @@ CREATE TABLE `folders` (
 	`id` integer PRIMARY KEY AUTOINCREMENT NOT NULL,
 	`uuid` text NOT NULL,
 	`name` text NOT NULL,
+	`icon` text,
 	`parent_id` integer,
 	`created_at` integer DEFAULT (unixepoch() * 1000) NOT NULL,
 	`updated_at` integer DEFAULT (unixepoch() * 1000) NOT NULL,

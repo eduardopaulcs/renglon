@@ -1,7 +1,7 @@
 import { router, useLocalSearchParams } from 'expo-router';
 import { useEffect, useRef, useState } from 'react';
-import { KeyboardAvoidingView, ScrollView, StyleSheet, TextInput, View } from 'react-native';
-import { ActivityIndicator, Appbar, Chip, Menu, Text } from 'react-native-paper';
+import { KeyboardAvoidingView, ScrollView, Share, StyleSheet, TextInput, View } from 'react-native';
+import { ActivityIndicator, Appbar, Button, Chip, Dialog, List, Menu, Portal, Text } from 'react-native-paper';
 
 import { FolderPickerDialog } from '@/components/FolderPickerDialog';
 import { MarkdownPreview } from '@/components/MarkdownPreview';
@@ -14,17 +14,24 @@ import {
   deleteNotesForever,
   getNoteItem,
   restoreNotes,
-  setNoteFolder,
-  setNotePinned,
-  setNoteTags,
+  setNotesFolder,
+  setNotesPinned,
   trashNotes,
   updateNoteContent,
   type NoteListItem,
 } from '@/db/queries/notes';
 import { formatDate, t, tp } from '@/i18n';
-import { applyFormat, noteToMarkdown, safeFileName, type FormatKind, type TextSelection } from '@/lib/markdown';
+import { folderIcon } from '@/lib/appearance';
+import {
+  applyFormat,
+  noteToMarkdown,
+  noteToPlainText,
+  safeFileName,
+  type FormatKind,
+  type TextSelection,
+} from '@/lib/markdown';
 import { shareTextFile } from '@/services/files';
-import { titleFont, useAppTheme } from '@/theme';
+import { tagColors, titleFont, useAppTheme } from '@/theme';
 
 const AUTOSAVE_DELAY_MS = 600;
 
@@ -64,6 +71,7 @@ function NoteEditor({ note }: { note: NoteListItem }) {
   const [bodyFocused, setBodyFocused] = useState(false);
   const [menuOpen, setMenuOpen] = useState(false);
   const [picker, setPicker] = useState<'tags' | 'folder' | null>(null);
+  const [shareOpen, setShareOpen] = useState(false);
   const [selection, setSelection] = useState<TextSelection>({ start: 0, end: 0 });
   const [forcedSelection, setForcedSelection] = useState<TextSelection>();
   const bodyRef = useRef<TextInput>(null);
@@ -129,14 +137,25 @@ function NoteEditor({ note }: { note: NoteListItem }) {
     showSnackbar(tp('notes.trashed', 1), { label: t('common.undo'), onPress: () => restoreNotes([noteId]) });
   };
 
-  const share = async () => {
+  const openShare = () => {
     setMenuOpen(false);
-    await shareTextFile(
-      safeFileName(title, t('notes.untitled'), 'md'),
-      noteToMarkdown(title, body),
-      'text/markdown',
-      t('editor.share')
-    );
+    setShareOpen(true);
+  };
+
+  // Plain text goes out as text, so chat and mail apps paste it straight into the message.
+  // Markdown goes out as a .md file, which is what editors and file apps expect.
+  const shareAs = async (format: 'plain' | 'markdown') => {
+    setShareOpen(false);
+    if (format === 'plain') {
+      await Share.share({ title: title.trim() || undefined, message: noteToPlainText(title, body) });
+    } else {
+      await shareTextFile(
+        safeFileName(title, t('notes.untitled'), 'md'),
+        noteToMarkdown(title, body),
+        'text/markdown',
+        t('editor.share')
+      );
+    }
   };
 
   return (
@@ -147,7 +166,7 @@ function NoteEditor({ note }: { note: NoteListItem }) {
         <Appbar.Action
           icon={note.pinned ? 'pin' : 'pin-outline'}
           color={note.pinned ? theme.colors.tertiary : undefined}
-          onPress={() => setNotePinned(noteId, !note.pinned)}
+          onPress={() => setNotesPinned([noteId], !note.pinned)}
           accessibilityLabel={note.pinned ? t('editor.unpin') : t('editor.pin')}
         />
         <Appbar.Action
@@ -161,9 +180,9 @@ function NoteEditor({ note }: { note: NoteListItem }) {
           anchor={
             <Appbar.Action icon="dots-vertical" onPress={() => setMenuOpen(true)} accessibilityLabel={t('common.more')} />
           }>
-          <Menu.Item leadingIcon="tag-outline" title={t('editor.tags')} onPress={() => openPicker('tags')} />
           <Menu.Item leadingIcon="folder-outline" title={t('editor.folder')} onPress={() => openPicker('folder')} />
-          <Menu.Item leadingIcon="share-variant-outline" title={t('editor.share')} onPress={share} />
+          <Menu.Item leadingIcon="tag-outline" title={t('editor.tags')} onPress={() => openPicker('tags')} />
+          <Menu.Item leadingIcon="share-variant-outline" title={t('editor.share')} onPress={openShare} />
           <Menu.Item
             leadingIcon="trash-can-outline"
             title={t('editor.delete')}
@@ -191,14 +210,26 @@ function NoteEditor({ note }: { note: NoteListItem }) {
           />
 
           <View style={styles.meta}>
-            <Chip compact icon="folder-outline" onPress={() => setPicker('folder')} style={styles.chip}>
+            <Chip
+              compact
+              icon={note.folder ? folderIcon(note.folder.icon) : 'folder-outline'}
+              onPress={() => setPicker('folder')}
+              style={styles.chip}>
               {note.folder?.name ?? t('editor.noFolder')}
             </Chip>
-            {note.tags.map((tag) => (
-              <Chip key={tag.id} compact onPress={() => setPicker('tags')} style={styles.chip}>
-                #{tag.name}
-              </Chip>
-            ))}
+            {note.tags.map((tag) => {
+              const colors = tagColors(theme, tag.color);
+              return (
+                <Chip
+                  key={tag.id}
+                  compact
+                  onPress={() => setPicker('tags')}
+                  style={[styles.chip, { backgroundColor: colors.container }]}
+                  textStyle={{ color: colors.onContainer }}>
+                  #{tag.name}
+                </Chip>
+              );
+            })}
             {note.tags.length === 0 ? (
               <Chip compact icon="tag-plus-outline" onPress={() => setPicker('tags')} style={styles.chip}>
                 {t('editor.addTags')}
@@ -236,16 +267,37 @@ function NoteEditor({ note }: { note: NoteListItem }) {
 
       <TagPickerDialog
         visible={picker === 'tags'}
-        selectedIds={note.tags.map((tag) => tag.id)}
-        onChange={(ids) => setNoteTags(noteId, ids)}
+        noteIds={[noteId]}
         onDismiss={() => setPicker(null)}
       />
       <FolderPickerDialog
         visible={picker === 'folder'}
         selectedId={note.folderId}
-        onSelect={(folderId) => setNoteFolder(noteId, folderId)}
+        onSelect={(folderId) => setNotesFolder([noteId], folderId)}
         onDismiss={() => setPicker(null)}
       />
+      <Portal>
+        <Dialog visible={shareOpen} onDismiss={() => setShareOpen(false)}>
+          <Dialog.Title>{t('editor.shareAs')}</Dialog.Title>
+          <Dialog.Content style={styles.shareOptions}>
+            <List.Item
+              title={t('editor.sharePlain')}
+              description={t('editor.sharePlainHint')}
+              left={(props) => <List.Icon {...props} icon="text" />}
+              onPress={() => shareAs('plain')}
+            />
+            <List.Item
+              title={t('editor.shareMarkdown')}
+              description={t('editor.shareMarkdownHint')}
+              left={(props) => <List.Icon {...props} icon="language-markdown-outline" />}
+              onPress={() => shareAs('markdown')}
+            />
+          </Dialog.Content>
+          <Dialog.Actions>
+            <Button onPress={() => setShareOpen(false)}>{t('common.cancel')}</Button>
+          </Dialog.Actions>
+        </Dialog>
+      </Portal>
     </View>
   );
 }
@@ -265,4 +317,5 @@ const styles = StyleSheet.create({
   meta: { flexDirection: 'row', flexWrap: 'wrap', gap: 6, paddingHorizontal: 16 },
   chip: { borderRadius: 999 },
   edited: { paddingHorizontal: 20, paddingTop: 8, paddingBottom: 12 },
+  shareOptions: { paddingHorizontal: 8 },
 });

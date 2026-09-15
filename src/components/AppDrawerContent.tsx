@@ -2,15 +2,17 @@ import { router, usePathname, type Href } from 'expo-router';
 import { DrawerContentScrollView, type DrawerContentComponentProps } from 'expo-router/drawer';
 import { useState } from 'react';
 import { StyleSheet, View } from 'react-native';
-import { Divider, IconButton, Drawer as PaperDrawer, Text } from 'react-native-paper';
+import { Divider, Icon, IconButton, Drawer as PaperDrawer, Text } from 'react-native-paper';
 
 import { useLiveData } from '@/db/live';
 import { createFolder, listFolders } from '@/db/queries/folders';
 import { noteCounts } from '@/db/queries/notes';
 import { createTag, listTags } from '@/db/queries/tags';
 import { t } from '@/i18n';
-import { titleFont, useAppTheme } from '@/theme';
+import { folderIcon } from '@/lib/appearance';
+import { tagColors, titleFont, useAppTheme } from '@/theme';
 
+import { FolderIconPicker, TagColorPicker } from './AppearancePicker';
 import { NameDialog } from './NameDialog';
 
 function Count({ value }: { value?: number }) {
@@ -42,9 +44,11 @@ export function AppDrawerContent(props: DrawerContentComponentProps) {
   const counts = useLiveData(noteCounts, ['notes', 'note_tags', 'folders', 'tags'], []);
   const [creating, setCreating] = useState<'folder' | 'tag' | null>(null);
 
+  // Closing first means the navigation that follows is computed from a closed drawer, so it
+  // cannot carry the open state back in.
   const go = (href: Href) => {
-    router.navigate(href);
     props.navigation.closeDrawer();
+    router.navigate(href);
   };
 
   return (
@@ -72,7 +76,7 @@ export function AppDrawerContent(props: DrawerContentComponentProps) {
           folders.map((folder) => (
             <PaperDrawer.Item
               key={folder.id}
-              icon="folder-outline"
+              icon={folderIcon(folder.icon)}
               label={folder.name}
               active={pathname === `/folder/${folder.id}`}
               onPress={() => go({ pathname: '/folder/[id]', params: { id: String(folder.id) } })}
@@ -90,7 +94,11 @@ export function AppDrawerContent(props: DrawerContentComponentProps) {
           tags.map((tag) => (
             <PaperDrawer.Item
               key={tag.id}
-              icon="tag-outline"
+              icon={
+                tag.color
+                  ? ({ size }) => <Icon source="tag" size={size} color={tagColors(theme, tag.color).dot} />
+                  : 'tag-outline'
+              }
               label={tag.name}
               active={pathname === `/tag/${tag.id}`}
               onPress={() => go({ pathname: '/tag/[id]', params: { id: String(tag.id) } })}
@@ -120,9 +128,10 @@ export function AppDrawerContent(props: DrawerContentComponentProps) {
         title={t('folders.new')}
         placeholder={t('folders.namePlaceholder')}
         confirmLabel={t('common.create')}
+        renderOption={(value, onChange) => <FolderIconPicker value={value} onChange={onChange} />}
         onDismiss={() => setCreating(null)}
-        onSubmit={(name) => {
-          const folder = createFolder(name);
+        onSubmit={(name, icon) => {
+          const folder = createFolder(name, icon);
           setCreating(null);
           go({ pathname: '/folder/[id]', params: { id: String(folder.id) } });
         }}
@@ -132,9 +141,10 @@ export function AppDrawerContent(props: DrawerContentComponentProps) {
         title={t('tags.new')}
         placeholder={t('tags.namePlaceholder')}
         confirmLabel={t('common.create')}
+        renderOption={(value, onChange) => <TagColorPicker value={value} onChange={onChange} />}
         onDismiss={() => setCreating(null)}
-        onSubmit={(name) => {
-          const tag = createTag(name);
+        onSubmit={(name, color) => {
+          const tag = createTag(name, color);
           setCreating(null);
           go({ pathname: '/tag/[id]', params: { id: String(tag.id) } });
         }}

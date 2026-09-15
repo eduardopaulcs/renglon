@@ -3,32 +3,52 @@ import { ScrollView, StyleSheet } from 'react-native';
 import { Button, Checkbox, Dialog, List, Portal, Text, TextInput } from 'react-native-paper';
 
 import { useLiveData } from '@/db/live';
+import { addTagToNotes, countTagsOnNotes, removeTagFromNotes } from '@/db/queries/notes';
 import { createTag, listTags } from '@/db/queries/tags';
 import { t } from '@/i18n';
+import { tagColors, useAppTheme } from '@/theme';
 
 interface TagPickerDialogProps {
   visible: boolean;
-  selectedIds: number[];
-  onChange: (ids: number[]) => void;
+  /** One note from the editor, or every selected note from a list. */
+  noteIds: number[];
   onDismiss: () => void;
 }
 
-/** Changes apply immediately, like toggling a checkbox anywhere else in Android. */
-export function TagPickerDialog({ visible, selectedIds, onChange, onDismiss }: TagPickerDialogProps) {
+/**
+ * Same layout as `FolderPickerDialog`: type to filter, and a "Create tag" row appears when the
+ * name does not exist yet. A note can have many tags, so the dialog stays open and changes apply
+ * immediately, like toggling a checkbox anywhere else in Android.
+ *
+ * With several notes, a tag only some of them have shows as indeterminate, and tapping it adds
+ * the tag to all of them.
+ */
+export function TagPickerDialog({ visible, noteIds, onDismiss }: TagPickerDialogProps) {
+  const theme = useAppTheme();
   const allTags = useLiveData(listTags, ['tags'], []) ?? [];
+  // Keyed by the ids' contents: callers pass a fresh array on every render.
+  const counts = useLiveData(() => countTagsOnNotes(noteIds), ['note_tags'], [noteIds.join(',')]);
   const [query, setQuery] = useState('');
 
   const trimmed = query.trim();
   const lower = trimmed.toLowerCase();
   const visibleTags = lower ? allTags.filter((tag) => tag.name.toLowerCase().includes(lower)) : allTags;
-  const exactMatch = allTags.some((tag) => tag.name.toLowerCase() === lower);
+  const exactMatch = allTags.find((tag) => tag.name.toLowerCase() === lower);
 
-  const toggle = (id: number) =>
-    onChange(selectedIds.includes(id) ? selectedIds.filter((value) => value !== id) : [...selectedIds, id]);
+  const statusOf = (tagId: number) => {
+    const tagged = counts?.get(tagId) ?? 0;
+    if (tagged === 0) return 'unchecked';
+    return tagged >= noteIds.length ? 'checked' : 'indeterminate';
+  };
 
-  const create = () => {
-    const tag = createTag(trimmed);
-    if (!selectedIds.includes(tag.id)) onChange([...selectedIds, tag.id]);
+  const toggle = (tagId: number) => {
+    if (statusOf(tagId) === 'checked') removeTagFromNotes(noteIds, tagId);
+    else addTagToNotes(noteIds, tagId);
+  };
+
+  const submit = () => {
+    if (!trimmed) return;
+    addTagToNotes(noteIds, (exactMatch ?? createTag(trimmed)).id);
     setQuery('');
   };
 
@@ -46,9 +66,9 @@ export function TagPickerDialog({ visible, selectedIds, onChange, onDismiss }: T
             mode="outlined"
             dense
             value={query}
-            placeholder={t('tags.namePlaceholder')}
+            placeholder={t('tags.searchOrCreate')}
             onChangeText={setQuery}
-            onSubmitEditing={() => trimmed && !exactMatch && create()}
+            onSubmitEditing={submit}
             left={<TextInput.Icon icon="tag-outline" />}
           />
         </Dialog.Content>
@@ -58,15 +78,23 @@ export function TagPickerDialog({ visible, selectedIds, onChange, onDismiss }: T
               <List.Item
                 title={t('tags.createInline', { name: trimmed })}
                 left={(props) => <List.Icon {...props} icon="plus" />}
-                onPress={create}
+                onPress={submit}
               />
             ) : null}
             {visibleTags.map((tag) => (
-              <Checkbox.Item
+              <List.Item
                 key={tag.id}
-                label={tag.name}
-                status={selectedIds.includes(tag.id) ? 'checked' : 'unchecked'}
+                title={tag.name}
+                titleNumberOfLines={1}
                 onPress={() => toggle(tag.id)}
+                left={(props) => (
+                  <List.Icon
+                    {...props}
+                    icon={tag.color ? 'tag' : 'tag-outline'}
+                    color={tag.color ? tagColors(theme, tag.color).dot : props.color}
+                  />
+                )}
+                right={() => <Checkbox.Android status={statusOf(tag.id)} onPress={() => toggle(tag.id)} />}
               />
             ))}
             {allTags.length === 0 && !trimmed ? (

@@ -5,61 +5,113 @@ import { Button, Dialog, List, Portal, RadioButton, TextInput } from 'react-nati
 import { useLiveData } from '@/db/live';
 import { createFolder, listFolders } from '@/db/queries/folders';
 import { t } from '@/i18n';
+import { folderIcon } from '@/lib/appearance';
 
 interface FolderPickerDialogProps {
   visible: boolean;
-  selectedId: number | null;
+  /** `undefined` when several notes with different folders are being moved: nothing is checked. */
+  selectedId: number | null | undefined;
   onSelect: (folderId: number | null) => void;
   onDismiss: () => void;
 }
 
-const NO_FOLDER = 'none';
+/** A single-choice row with the folder's icon, shared by every dialog that lists folders. */
+export function FolderOptionRow({
+  icon,
+  label,
+  checked,
+  onPress,
+}: {
+  icon: string;
+  label: string;
+  checked: boolean;
+  onPress: () => void;
+}) {
+  return (
+    <List.Item
+      title={label}
+      titleNumberOfLines={1}
+      onPress={onPress}
+      left={(props) => <List.Icon {...props} icon={icon} />}
+      right={() => <RadioButton.Android value={label} status={checked ? 'checked' : 'unchecked'} onPress={onPress} />}
+    />
+  );
+}
 
+/**
+ * Same layout as `TagPickerDialog`: type to filter, and a "Create folder" row appears when the
+ * name does not exist yet. Picking a folder, or creating one, applies it and closes the dialog,
+ * since a note lives in a single folder.
+ */
 export function FolderPickerDialog({ visible, selectedId, onSelect, onDismiss }: FolderPickerDialogProps) {
   const folders = useLiveData(listFolders, ['folders'], []) ?? [];
-  const [name, setName] = useState('');
-  const trimmed = name.trim();
+  const [query, setQuery] = useState('');
 
-  const pick = (folderId: number | null) => {
-    onSelect(folderId);
-    setName('');
+  const trimmed = query.trim();
+  const lower = trimmed.toLowerCase();
+  const visibleFolders = lower ? folders.filter((folder) => folder.name.toLowerCase().includes(lower)) : folders;
+  const exactMatch = folders.find((folder) => folder.name.toLowerCase() === lower);
+
+  const close = () => {
+    setQuery('');
     onDismiss();
   };
 
-  const create = () => {
-    if (trimmed) pick(createFolder(trimmed).id);
+  const pick = (folderId: number | null) => {
+    onSelect(folderId);
+    close();
+  };
+
+  const submit = () => {
+    if (!trimmed) return;
+    pick(exactMatch ? exactMatch.id : createFolder(trimmed).id);
   };
 
   return (
     <Portal>
-      <Dialog visible={visible} onDismiss={onDismiss}>
+      <Dialog visible={visible} onDismiss={close}>
         <Dialog.Title>{t('folders.pick')}</Dialog.Title>
+        <Dialog.Content>
+          <TextInput
+            mode="outlined"
+            dense
+            value={query}
+            placeholder={t('folders.searchOrCreate')}
+            onChangeText={setQuery}
+            onSubmitEditing={submit}
+            left={<TextInput.Icon icon="folder-outline" />}
+          />
+        </Dialog.Content>
         <Dialog.ScrollArea style={styles.scrollArea}>
           <ScrollView keyboardShouldPersistTaps="handled">
-            <RadioButton.Group
-              value={selectedId === null ? NO_FOLDER : String(selectedId)}
-              onValueChange={(value) => pick(value === NO_FOLDER ? null : Number(value))}>
-              <RadioButton.Item label={t('editor.noFolder')} value={NO_FOLDER} />
-              {folders.map((folder) => (
-                <RadioButton.Item key={folder.id} label={folder.name} value={String(folder.id)} />
-              ))}
-            </RadioButton.Group>
-            <List.Section style={styles.create}>
-              <TextInput
-                mode="outlined"
-                dense
-                value={name}
-                placeholder={t('folders.new')}
-                onChangeText={setName}
-                onSubmitEditing={create}
-                left={<TextInput.Icon icon="folder-plus-outline" />}
-                right={trimmed ? <TextInput.Icon icon="check" onPress={create} /> : undefined}
+            {trimmed && !exactMatch ? (
+              <List.Item
+                title={t('folders.createInline', { name: trimmed })}
+                left={(props) => <List.Icon {...props} icon="plus" />}
+                onPress={submit}
               />
-            </List.Section>
+            ) : null}
+            {trimmed ? null : (
+              <FolderOptionRow
+                icon="folder-off-outline"
+                label={t('editor.noFolder')}
+                checked={selectedId === null}
+                onPress={() => pick(null)}
+              />
+            )}
+            {visibleFolders.map((folder) => (
+              <FolderOptionRow
+                key={folder.id}
+                icon={folderIcon(folder.icon)}
+                label={folder.name}
+                checked={selectedId === folder.id}
+                onPress={() => pick(folder.id)}
+              />
+            ))}
           </ScrollView>
         </Dialog.ScrollArea>
         <Dialog.Actions>
-          <Button onPress={onDismiss}>{t('common.close')}</Button>
+          <Button onPress={close}>{t('common.close')}</Button>
         </Dialog.Actions>
       </Dialog>
     </Portal>
@@ -67,6 +119,5 @@ export function FolderPickerDialog({ visible, selectedId, onSelect, onDismiss }:
 }
 
 const styles = StyleSheet.create({
-  scrollArea: { maxHeight: 380, paddingHorizontal: 0 },
-  create: { paddingHorizontal: 24 },
+  scrollArea: { maxHeight: 320, paddingHorizontal: 0 },
 });

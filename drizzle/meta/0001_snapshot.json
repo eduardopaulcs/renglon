@@ -1,6 +1,6 @@
 {
-  "id": "fdf35023-1519-4eab-b698-8b8b8d48c769",
-  "prevId": "b3a2ae53-eeba-476d-9a2d-1607892d2cda",
+  "id": "72757346-62c6-46fa-a92d-7b38cc16b104",
+  "prevId": "6943ea4f-a4e9-45ce-910a-712734a1871c",
   "version": "6",
   "dialect": "sqlite",
   "tables": {
@@ -26,6 +26,13 @@
           "type": "text",
           "primaryKey": false,
           "notNull": true,
+          "autoincrement": false
+        },
+        "icon": {
+          "name": "icon",
+          "type": "text",
+          "primaryKey": false,
+          "notNull": false,
           "autoincrement": false
         },
         "parent_id": {

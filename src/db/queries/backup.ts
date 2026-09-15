@@ -1,6 +1,6 @@
-import { eq, inArray, sql } from 'drizzle-orm';
+import { eq, inArray, isNull, sql } from 'drizzle-orm';
 
-import { BACKUP_APP, BACKUP_VERSION, planMerge, type Backup } from '@/lib/backup-format';
+import { BACKUP_APP, BACKUP_VERSION, mergedDeletedAt, planMerge, type Backup } from '@/lib/backup-format';
 
 import { db } from '../client';
 import { folders, noteTags, notes, tags } from '../schema';
@@ -8,7 +8,9 @@ import { folders, noteTags, notes, tags } from '../schema';
 export function exportBackup(): Backup {
   const folderRows = db.select().from(folders).all();
   const tagRows = db.select().from(tags).all();
-  const noteRows = db.select().from(notes).all();
+  // The trash stays out: a backup holds the notes worth keeping, and restoring it must not
+  // bring back notes that were deleted on purpose.
+  const noteRows = db.select().from(notes).where(isNull(notes.deletedAt)).all();
   const links = db.select().from(noteTags).all();
 
   const folderUuid = new Map(folderRows.map((f) => [f.id, f.uuid]));
@@ -28,6 +30,7 @@ export function exportBackup(): Backup {
       uuid: f.uuid,
       name: f.name,
       parentUuid: f.parentId === null ? null : (folderUuid.get(f.parentId) ?? null),
+      icon: f.icon,
       createdAt: f.createdAt,
       updatedAt: f.updatedAt,
     })),
@@ -68,11 +71,13 @@ export function importBackup(backup: Backup): { created: number; updated: number
 
     for (const uuid of folderPlan.insert) {
       const f = incomingFolders.get(uuid)!;
-      tx.insert(folders).values({ uuid, name: f.name, createdAt: f.createdAt, updatedAt: f.updatedAt }).run();
+      tx.insert(folders)
+        .values({ uuid, name: f.name, icon: f.icon, createdAt: f.createdAt, updatedAt: f.updatedAt })
+        .run();
     }
     for (const uuid of folderPlan.update) {
       const f = incomingFolders.get(uuid)!;
-      tx.update(folders).set({ name: f.name, updatedAt: f.updatedAt }).where(eq(folders.uuid, uuid)).run();
+      tx.update(folders).set({ name: f.name, icon: f.icon, updatedAt: f.updatedAt }).where(eq(folders.uuid, uuid)).run();
     }
 
     const folderId = new Map(tx.select({ id: folders.id, uuid: folders.uuid }).from(folders).all().map((f) => [f.uuid, f.id]));
@@ -120,8 +125,12 @@ export function importBackup(backup: Backup): { created: number; updated: number
     }
 
     // --- Notes ---
-    const existingNotes = tx.select({ uuid: notes.uuid, updatedAt: notes.updatedAt }).from(notes).all();
+    const existingNotes = tx
+      .select({ uuid: notes.uuid, updatedAt: notes.updatedAt, deletedAt: notes.deletedAt })
+      .from(notes)
+      .all();
     const notePlan = planMerge(new Map(existingNotes.map((n) => [n.uuid, n.updatedAt])), backup.notes);
+    const localDeletedAt = new Map(existingNotes.map((n) => [n.uuid, n.deletedAt]));
     const incomingNotes = new Map(backup.notes.map((n) => [n.uuid, n]));
 
     const values = (uuid: string) => {
@@ -132,7 +141,7 @@ export function importBackup(backup: Backup): { created: number; updated: number
         folderId: n.folderUuid ? (folderId.get(n.folderUuid) ?? null) : null,
         pinned: n.pinned,
         archived: n.archived,
-        deletedAt: n.deletedAt,
+        deletedAt: mergedDeletedAt(localDeletedAt.get(uuid), n.deletedAt),
         createdAt: n.createdAt,
         updatedAt: n.updatedAt,
       };
@@ -143,6 +152,16 @@ export function importBackup(backup: Backup): { created: number; updated: number
     }
     for (const uuid of notePlan.update) {
       tx.update(notes).set(values(uuid)).where(eq(notes.uuid, uuid)).run();
+    }
+
+    // Trashing a note does not change updatedAt, so the backup copy of a trashed note usually is
+    // not newer and gets skipped. Its trash state is merged anyway, or importing a backup could
+    // never bring such a note back.
+    const restored = notePlan.skip.filter(
+      (uuid) => localDeletedAt.get(uuid) !== null && incomingNotes.get(uuid)!.deletedAt === null
+    );
+    if (restored.length) {
+      tx.update(notes).set({ deletedAt: null }).where(inArray(notes.uuid, restored)).run();
     }
 
     const touched = [...notePlan.insert, ...notePlan.update];
@@ -160,6 +179,6 @@ export function importBackup(backup: Backup): { created: number; updated: number
       }
     }
 
-    return { created: notePlan.insert.length, updated: notePlan.update.length };
+    return { created: notePlan.insert.length, updated: notePlan.update.length + restored.length };
   });
 }

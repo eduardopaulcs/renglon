@@ -2,6 +2,44 @@ import { DarkTheme as NavigationDark, DefaultTheme as NavigationLight } from 'ex
 import { Platform } from 'react-native';
 import { MD3DarkTheme, MD3LightTheme, useTheme } from 'react-native-paper';
 
+import { sanitizeTagColor, type TagColor } from '@/lib/appearance';
+
+export interface TagSwatch {
+  /** Chip background. */
+  container: string;
+  /** Text on the chip. */
+  onContainer: string;
+  /** Solid color for small marks: dots, drawer icons, swatches. */
+  dot: string;
+}
+
+// Muted like the rest of the palette, so colored tags read as ink on paper rather than stickers.
+const lightTagColors: Record<TagColor, TagSwatch> = {
+  red: { container: '#F6D5D0', onContainer: '#6B1E14', dot: '#C8553D' },
+  orange: { container: '#F8DEC4', onContainer: '#6A3510', dot: '#D9822B' },
+  yellow: { container: '#F3E7B3', onContainer: '#5A4A0E', dot: '#C9A227' },
+  green: { container: '#D6E8CF', onContainer: '#23461B', dot: '#5B8C4A' },
+  teal: { container: '#CFE7E3', onContainer: '#14453F', dot: '#3F8F85' },
+  blue: { container: '#D6E2F2', onContainer: '#0E2340', dot: '#3E6BA8' },
+  purple: { container: '#E3D8EE', onContainer: '#3B2257', dot: '#7E5AA6' },
+  pink: { container: '#F4D6E3', onContainer: '#5E1B3A', dot: '#C0568A' },
+  brown: { container: '#E6D6C6', onContainer: '#4A3020', dot: '#8C6446' },
+  gray: { container: '#E2DED6', onContainer: '#3A3832', dot: '#8A857A' },
+};
+
+const darkTagColors: Record<TagColor, TagSwatch> = {
+  red: { container: '#5A2A22', onContainer: '#F6D5D0', dot: '#E08A73' },
+  orange: { container: '#5A3A1E', onContainer: '#F8DEC4', dot: '#E8A15C' },
+  yellow: { container: '#4E4418', onContainer: '#F3E7B3', dot: '#D9BC52' },
+  green: { container: '#2F4529', onContainer: '#D6E8CF', dot: '#8DBB7A' },
+  teal: { container: '#1F4642', onContainer: '#CFE7E3', dot: '#6FBDB2' },
+  blue: { container: '#2C4466', onContainer: '#D6E2F2', dot: '#8FB0DC' },
+  purple: { container: '#40305A', onContainer: '#E3D8EE', dot: '#B394D6' },
+  pink: { container: '#582740', onContainer: '#F4D6E3', dot: '#E08AB5' },
+  brown: { container: '#4A3828', onContainer: '#E6D6C6', dot: '#C49A78' },
+  gray: { container: '#3C3A34', onContainer: '#E2DED6', dot: '#B3AD9F' },
+};
+
 /**
  * "Notebook" palette: cream paper, navy ink for primary actions and a margin red as the accent.
  * The name of the app is a ruled line, so the editor draws them; `notebook` holds the colors
@@ -47,6 +85,7 @@ export const lightTheme = {
     ruleLine: '#E4D8C0',
     marginLine: '#E9B9AB',
   },
+  tagColors: lightTagColors,
 };
 
 export type AppTheme = typeof lightTheme;
@@ -91,9 +130,21 @@ export const darkTheme: AppTheme = {
     ruleLine: '#3A362E',
     marginLine: '#6E3B30',
   },
+  tagColors: darkTagColors,
 };
 
 export const useAppTheme = () => useTheme<AppTheme>();
+
+/** Colors for a tag; tags without a color use the neutral secondary container. */
+export function tagColors(theme: AppTheme, color: string | null): TagSwatch {
+  const key = sanitizeTagColor(color);
+  if (key) return theme.tagColors[key];
+  return {
+    container: theme.colors.secondaryContainer,
+    onContainer: theme.colors.onSecondaryContainer,
+    dot: theme.colors.outline,
+  };
+}
 
 /** Serif for titles gives the notebook feel; Android ships Noto Serif, so nothing is bundled. */
 export const titleFont = Platform.select({ ios: 'Georgia', default: 'serif' });

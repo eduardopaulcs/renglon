@@ -8,25 +8,29 @@ import { useSnackbar } from '@/components/SnackbarProvider';
 import { exportBackup, importBackup } from '@/db/queries/backup';
 import { t } from '@/i18n';
 import { BackupFormatError, parseBackup } from '@/lib/backup-format';
-import { pickTextFile, shareTextFile } from '@/services/files';
+import { pickTextFile, saveTextFile, shareTextFile } from '@/services/files';
 import { titleFont, useAppTheme } from '@/theme';
+
+const BACKUP_MIME_TYPE = 'application/json';
 
 export default function BackupScreen() {
   const theme = useAppTheme();
   const navigation = useNavigation<DrawerNavigationProp<Record<string, object | undefined>>>();
   const showSnackbar = useSnackbar();
-  const [busy, setBusy] = useState<'export' | 'import' | null>(null);
+  const [busy, setBusy] = useState<'save' | 'share' | 'import' | null>(null);
 
-  const runExport = async () => {
-    setBusy('export');
+  const runExport = async (target: 'save' | 'share') => {
+    setBusy(target);
     try {
       const date = new Date().toISOString().slice(0, 10);
-      await shareTextFile(
-        `renglon-backup-${date}.json`,
-        JSON.stringify(exportBackup(), null, 2),
-        'application/json',
-        t('backup.shareDialog')
-      );
+      const fileName = `renglon-backup-${date}.json`;
+      const content = JSON.stringify(exportBackup(), null, 2);
+
+      if (target === 'share') {
+        await shareTextFile(fileName, content, BACKUP_MIME_TYPE, t('backup.shareDialog'));
+      } else if (await saveTextFile(fileName, content, BACKUP_MIME_TYPE)) {
+        showSnackbar(t('backup.saved'));
+      }
     } catch {
       showSnackbar(t('common.failed'));
     } finally {
@@ -75,14 +79,22 @@ export default function BackupScreen() {
               {t('backup.exportBody')}
             </Text>
           </Card.Content>
-          <Card.Actions>
+          <Card.Actions style={styles.actions}>
+            <Button
+              mode="outlined"
+              icon="share-variant-outline"
+              loading={busy === 'share'}
+              disabled={busy !== null}
+              onPress={() => runExport('share')}>
+              {t('backup.shareAction')}
+            </Button>
             <Button
               mode="contained"
-              icon="export-variant"
-              loading={busy === 'export'}
+              icon="content-save-outline"
+              loading={busy === 'save'}
               disabled={busy !== null}
-              onPress={runExport}>
-              {t('backup.exportAction')}
+              onPress={() => runExport('save')}>
+              {t('backup.saveAction')}
             </Button>
           </Card.Actions>
         </Card>
@@ -115,4 +127,5 @@ const styles = StyleSheet.create({
   title: { fontFamily: titleFont, fontWeight: '600' },
   content: { padding: 16, gap: 16 },
   cardTitle: { fontFamily: titleFont, fontWeight: '600' },
+  actions: { flexWrap: 'wrap', rowGap: 8 },
 });
