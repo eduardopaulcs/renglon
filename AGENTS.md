@@ -17,6 +17,7 @@ This is the instructions file for AI assistants.
 | `npm run android` | Emulator + full native build (slow) |
 | `npm run db:generate` | Regenerates migrations from `src/db/schema.ts` |
 | `npm run typecheck` | `tsc --noEmit` |
+| `npm run icons` | Regenerates every icon PNG from the SVG drawing in `scripts/export-icons.mjs` |
 
 When asked to start or run the app, launch it (`npm run dev`), confirm it is up and stop there.
 Do not keep monitoring it, tapping through screens, taking screenshots or inspecting the database
