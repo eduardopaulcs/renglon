@@ -38,19 +38,19 @@ App de bloc de notas para Android. Expo + React Native + TypeScript, datos 100% 
 
 ## Entorno (Windows)
 
-- `JAVA_HOME` apunta al JBR de Android Studio (JDK 25). Sirve porque Gradle 9.3 lo soporta.
-  El JDK del sistema es 26 y **no** funciona con AGP.
-- La configuracion critica de Gradle vive en **`~/.gradle/gradle.properties`**, no en el repo:
-  es especifica de esta maquina y ademas sobrevive a `expo prebuild`. Contiene dos flags que
-  resuelven fallos no obvios:
-  - `--enable-native-access=ALL-UNNAMED`: JNA (usado por AGP) llama a `System.load`, y bajo
-    JDK 25 eso escribe un warning por stderr. AGP lee el stderr de sus tareas de CMake y lo
-    toma como fallo, con lo cual el build muere en `configureCMakeDebug` mostrando el warning
-    como si fuera el error.
-  - `-Djavax.net.ssl.trustStore=...`: el Web/Mail Shield de AVG intercepta TLS con su propia
-    CA. Windows confia en ella, Java no, y toda descarga falla con `PKIX path building failed`.
-    El truststore en `%LOCALAPPDATA%\Android\java-tls\` es el cacerts del JDK mas esa CA.
-- **No usar `JAVA_TOOL_OPTIONS`** para esto: lo hereda todo JVM hijo y le antepone un
+- **`JAVA_HOME` tiene que ser un JDK 21** (`%LOCALAPPDATA%\Java\jdk-21`). Ni el JDK 26 del
+  sistema ni el JBR 25 que trae Android Studio sirven: con JDK 24+ el build muere en
+  `configureCMakeDebug`. La causa es que AGP forkea `prefab` y
+  `GeneratePrefabPackages.reportErrors` convierte **cualquier** linea de stderr en excepcion;
+  los JDK nuevos escriben ahi un warning de acceso nativo. El error que se ve en pantalla es
+  ese warning, no la causa real, asi que es facil perseguir la pista equivocada.
+  `npm run doctor` lo detecta antes de compilar.
+- El truststore de Gradle vive en **`~/.gradle/gradle.properties`**, fuera del repo: es
+  especifico de esta maquina y sobrevive a `expo prebuild`. El Web/Mail Shield de AVG
+  intercepta TLS con su propia CA; Windows confia en ella, Java no, y toda descarga falla con
+  `PKIX path building failed`. El archivo en `%LOCALAPPDATA%\Android\java-tls\` es el cacerts
+  del JDK mas esa CA.
+- **No usar `JAVA_TOOL_OPTIONS`** para el truststore: lo hereda todo JVM hijo y le antepone un
   "Picked up JAVA_TOOL_OPTIONS" a stderr, que es justo lo que descompone el parseo de AGP.
 
 ## Convenciones

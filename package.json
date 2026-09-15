@@ -4,6 +4,7 @@
   "version": "1.0.0",
   "dependencies": {
     "@expo/ui": "~57.0.18",
+    "@expo/vector-icons": "^15.0.2",
     "drizzle-orm": "^0.45.2",
     "expo": "~57.0.22",
     "expo-build-properties": "~57.0.17",

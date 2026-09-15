@@ -71,14 +71,18 @@ if (!javaHome) {
 
   if (major === null) {
     warn('JAVA_HOME', `no pude leer la version de java en ${javaHome}`);
-  } else if (gradle && gradle.major < 9 && major > 21) {
-    bad(
-      'JDK',
-      `JDK ${major} con Gradle ${gradle.raw}. Gradle 8.x no soporta JDK >21; ` +
-        'apunta JAVA_HOME a un JDK 21'
-    );
   } else if (major < 17) {
     bad('JDK', `JDK ${major} — el Android Gradle Plugin necesita 17 o superior`);
+  } else if (major > 21) {
+    // No es una precaucion teorica: con JDK 24+ el build muere en
+    // configureCMakeDebug. AGP forkea prefab, y GeneratePrefabPackages.reportErrors
+    // convierte cualquier linea de stderr en excepcion; el JDK nuevo escribe ahi
+    // un warning de acceso nativo. El error que se ve es el warning, no la causa.
+    bad(
+      'JDK',
+      `JDK ${major} — usa un JDK 21. Con 24+ el Android Gradle Plugin falla en ` +
+        'configureCMakeDebug por un warning de acceso nativo que interpreta como error'
+    );
   } else {
     ok('JDK', `${major} (${javaHome})${gradle ? ` · Gradle ${gradle.raw}` : ''}`);
   }
