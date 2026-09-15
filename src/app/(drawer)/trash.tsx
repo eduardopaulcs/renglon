@@ -3,6 +3,7 @@ import type { DrawerNavigationProp } from 'expo-router/drawer';
 import { useState } from 'react';
 import { FlatList, StyleSheet, View } from 'react-native';
 import { Appbar, Button, Dialog, Portal, Text } from 'react-native-paper';
+import { useSafeAreaInsets } from 'react-native-safe-area-context';
 
 import { ConfirmDialog } from '@/components/ConfirmDialog';
 import { EmptyState } from '@/components/EmptyState';
@@ -26,8 +27,13 @@ export default function TrashScreen() {
   const theme = useAppTheme();
   const navigation = useNavigation<DrawerNavigationProp<Record<string, object | undefined>>>();
   const showSnackbar = useSnackbar();
+  const insets = useSafeAreaInsets();
   const [limit, setLimit] = useState(NOTE_PAGE_SIZE);
-  const page = useLiveData(() => listNotes({ trashed: true }, limit), ['notes', 'note_tags', 'tags', 'folders'], [limit]);
+  const page = useLiveData(
+    () => listNotes({ trashed: true }, limit),
+    ['notes', 'note_tags', 'tags', 'folders'],
+    [limit]
+  );
   const notes = page?.items ?? [];
   // Counted separately because the list may only hold the first page.
   const trashedCount = useLiveData(countTrashed, ['notes'], []) ?? 0;
@@ -44,7 +50,11 @@ export default function TrashScreen() {
   return (
     <View style={[styles.container, { backgroundColor: theme.colors.background }]}>
       <Appbar.Header style={{ backgroundColor: theme.colors.background }}>
-        <Appbar.Action icon="menu" onPress={() => navigation.openDrawer()} accessibilityLabel={t('nav.openMenu')} />
+        <Appbar.Action
+          icon="menu"
+          onPress={() => navigation.openDrawer()}
+          accessibilityLabel={t('nav.openMenu')}
+        />
         <Appbar.Content title={t('nav.trash')} titleStyle={[styles.title, { color: theme.colors.primary }]} />
         {notes.length ? (
           <Appbar.Action
@@ -58,7 +68,7 @@ export default function TrashScreen() {
       <FlatList
         data={notes}
         keyExtractor={(note) => String(note.id)}
-        contentContainerStyle={styles.list}
+        contentContainerStyle={[styles.list, { paddingBottom: 48 + insets.bottom }]}
         ItemSeparatorComponent={() => <View style={styles.separator} />}
         onEndReached={() => {
           if (page?.hasMore) setLimit(limit + NOTE_PAGE_SIZE);
@@ -68,7 +78,9 @@ export default function TrashScreen() {
         renderItem={({ item }) => (
           <NoteCard
             note={item}
-            dateLabel={item.deletedAt ? t('trash.deletedOn', { date: formatDate(item.deletedAt) }) : undefined}
+            dateLabel={
+              item.deletedAt ? t('trash.deletedOn', { date: formatDate(item.deletedAt) }) : undefined
+            }
             onPress={setActive}
           />
         )}
@@ -126,6 +138,6 @@ export default function TrashScreen() {
 const styles = StyleSheet.create({
   container: { flex: 1 },
   title: { fontFamily: titleFont, fontWeight: '600' },
-  list: { paddingHorizontal: 16, paddingTop: 8, paddingBottom: 48 },
+  list: { paddingHorizontal: 16, paddingTop: 8 },
   separator: { height: 10 },
 });

@@ -5,6 +5,7 @@ import { useCallback, useEffect, useState, type ReactNode } from 'react';
 import { BackHandler, FlatList, StyleSheet, View } from 'react-native';
 import { Appbar, FAB, Menu, Searchbar } from 'react-native-paper';
 import Animated, { useAnimatedStyle, useSharedValue, withTiming } from 'react-native-reanimated';
+import { useSafeAreaInsets } from 'react-native-safe-area-context';
 
 import { useLiveData } from '@/db/live';
 import { getFolder, listFolders } from '@/db/queries/folders';
@@ -54,18 +55,32 @@ interface NotesScreenProps {
 type DrawerNavigation = DrawerNavigationProp<Record<string, object | undefined>>;
 
 const EMPTY_PAGE: NotePage = { items: [], hasMore: false };
+// The app draws edge to edge, so Android's navigation bar (gesture pill or three buttons) sits
+// on top of it. Anything anchored to the bottom adds the bar's height from the safe-area insets.
 const FAB_BOTTOM = 28;
+/** Room under the last card so the FAB never covers it. */
+const LIST_BOTTOM_SPACE = 120;
 
 /**
  * The note list shared by "All notes", a folder and a tag. Notes created from a folder or tag
  * screen, or while filters are on, start inside that folder and with those tags, so they do not
  * vanish from the list the user was looking at.
  */
-export function NotesScreen({ title, folderId, tagId, emptyText, menu, banner, showGestureTip }: NotesScreenProps) {
+export function NotesScreen({
+  title,
+  folderId,
+  tagId,
+  emptyText,
+  menu,
+  banner,
+  showGestureTip,
+}: NotesScreenProps) {
   const theme = useAppTheme();
   const navigation = useNavigation<DrawerNavigation>();
   const showSnackbar = useSnackbar();
   const snackbarOffset = useSnackbarOffset();
+  const insets = useSafeAreaInsets();
+  const fabBottom = FAB_BOTTOM + insets.bottom;
 
   const [searching, setSearching] = useState(false);
   const [term, setTerm] = useState('');
@@ -102,7 +117,11 @@ export function NotesScreen({ title, folderId, tagId, emptyText, menu, banner, s
     useLiveData(
       () =>
         listNotes(
-          { folderId: effectiveFolderId, tagIds: effectiveTagIds, ids: term.trim() ? searchNoteIds(term) : undefined },
+          {
+            folderId: effectiveFolderId,
+            tagIds: effectiveTagIds,
+            ids: term.trim() ? searchNoteIds(term) : undefined,
+          },
           limit
         ),
       ['notes', 'note_tags', 'tags', 'folders'],
@@ -124,8 +143,8 @@ export function NotesScreen({ title, folderId, tagId, emptyText, menu, banner, s
   // The FAB moves up while a snackbar is showing instead of being covered by it.
   const fabLift = useSharedValue(0);
   useEffect(() => {
-    fabLift.set(withTiming(Math.max(0, snackbarOffset - FAB_BOTTOM), { duration: 200 }));
-  }, [fabLift, snackbarOffset]);
+    fabLift.set(withTiming(Math.max(0, snackbarOffset - fabBottom), { duration: 200 }));
+  }, [fabBottom, fabLift, snackbarOffset]);
   const fabStyle = useAnimatedStyle(() => ({ transform: [{ translateY: -fabLift.get() }] }));
 
   const clearSearch = () => {
@@ -155,7 +174,10 @@ export function NotesScreen({ title, folderId, tagId, emptyText, menu, banner, s
     gestureTip.dismiss();
     trashNotes(ids);
     setSelection(new Set());
-    showSnackbar(tp('notes.trashed', ids.length), { label: t('common.undo'), onPress: () => restoreNotes(ids) });
+    showSnackbar(tp('notes.trashed', ids.length), {
+      label: t('common.undo'),
+      onPress: () => restoreNotes(ids),
+    });
   };
 
   const togglePinned = () => {
@@ -199,7 +221,11 @@ export function NotesScreen({ title, folderId, tagId, emptyText, menu, banner, s
 
   const header = selecting ? (
     <Appbar.Header style={{ backgroundColor: theme.colors.primaryContainer }}>
-      <Appbar.Action icon="close" onPress={() => setSelection(new Set())} accessibilityLabel={t('notes.clearSelection')} />
+      <Appbar.Action
+        icon="close"
+        onPress={() => setSelection(new Set())}
+        accessibilityLabel={t('notes.clearSelection')}
+      />
       <Appbar.Content title={tp('notes.selected', selection.size)} />
       <Appbar.Action
         icon={allPinned ? 'pin-off-outline' : 'pin-outline'}
@@ -242,14 +268,28 @@ export function NotesScreen({ title, folderId, tagId, emptyText, menu, banner, s
     </Appbar.Header>
   ) : (
     <Appbar.Header style={{ backgroundColor: theme.colors.background }}>
-      <Appbar.Action icon="menu" onPress={() => navigation.openDrawer()} accessibilityLabel={t('nav.openMenu')} />
+      <Appbar.Action
+        icon="menu"
+        onPress={() => navigation.openDrawer()}
+        accessibilityLabel={t('nav.openMenu')}
+      />
       <Appbar.Content title={title} titleStyle={[styles.title, { color: theme.colors.primary }]} />
-      <Appbar.Action icon="magnify" onPress={() => setSearching(true)} accessibilityLabel={t('notes.search')} />
+      <Appbar.Action
+        icon="magnify"
+        onPress={() => setSearching(true)}
+        accessibilityLabel={t('notes.search')}
+      />
       {menu?.length ? (
         <Menu
           visible={menuOpen}
           onDismiss={() => setMenuOpen(false)}
-          anchor={<Appbar.Action icon="dots-vertical" onPress={() => setMenuOpen(true)} accessibilityLabel={t('common.more')} />}>
+          anchor={
+            <Appbar.Action
+              icon="dots-vertical"
+              onPress={() => setMenuOpen(true)}
+              accessibilityLabel={t('common.more')}
+            />
+          }>
           {menu.map((item) => (
             <Menu.Item
               key={item.label}
@@ -289,7 +329,7 @@ export function NotesScreen({ title, folderId, tagId, emptyText, menu, banner, s
       <FlatList
         data={notes}
         keyExtractor={(note) => String(note.id)}
-        contentContainerStyle={styles.list}
+        contentContainerStyle={[styles.list, { paddingBottom: LIST_BOTTOM_SPACE + insets.bottom }]}
         ItemSeparatorComponent={() => <View style={styles.separator} />}
         keyboardShouldPersistTaps="handled"
         onEndReached={loadMore}
@@ -297,7 +337,9 @@ export function NotesScreen({ title, folderId, tagId, emptyText, menu, banner, s
         ListEmptyComponent={
           <EmptyState
             icon={term.trim() ? 'text-search' : 'notebook-outline'}
-            title={term.trim() ? t('notes.noResults') : filtersActive ? t('notes.noFilterResults') : emptyText}
+            title={
+              term.trim() ? t('notes.noResults') : filtersActive ? t('notes.noFilterResults') : emptyText
+            }
             hint={term.trim() || filtersActive ? undefined : t('notes.emptyHint')}
           />
         }
@@ -314,7 +356,7 @@ export function NotesScreen({ title, folderId, tagId, emptyText, menu, banner, s
         )}
       />
       {selecting ? null : (
-        <Animated.View style={[styles.fab, fabStyle]}>
+        <Animated.View style={[styles.fab, { bottom: fabBottom }, fabStyle]}>
           <FAB
             icon="pencil"
             onPress={create}
@@ -349,8 +391,8 @@ const styles = StyleSheet.create({
   container: { flex: 1 },
   title: { fontFamily: titleFont, fontWeight: '600' },
   searchbar: { flex: 1, marginHorizontal: 8, elevation: 0 },
-  list: { paddingHorizontal: 16, paddingTop: 8, paddingBottom: 120 },
+  list: { paddingHorizontal: 16, paddingTop: 8 },
   separator: { height: 10 },
-  fab: { position: 'absolute', right: 20, bottom: FAB_BOTTOM },
+  fab: { position: 'absolute', right: 20 },
   fabButton: { borderRadius: 18 },
 });

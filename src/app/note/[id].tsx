@@ -1,7 +1,18 @@
 import { router, useLocalSearchParams } from 'expo-router';
 import { useEffect, useRef, useState } from 'react';
 import { KeyboardAvoidingView, ScrollView, Share, StyleSheet, TextInput, View } from 'react-native';
-import { ActivityIndicator, Appbar, Button, Chip, Dialog, List, Menu, Portal, Text } from 'react-native-paper';
+import {
+  ActivityIndicator,
+  Appbar,
+  Button,
+  Chip,
+  Dialog,
+  List,
+  Menu,
+  Portal,
+  Text,
+} from 'react-native-paper';
+import { useSafeAreaInsets } from 'react-native-safe-area-context';
 
 import { FolderPickerDialog } from '@/components/FolderPickerDialog';
 import { MarkdownPreview } from '@/components/MarkdownPreview';
@@ -64,6 +75,7 @@ function NoteEditor({ note }: { note: NoteListItem }) {
   const noteId = note.id;
   const theme = useAppTheme();
   const showSnackbar = useSnackbar();
+  const insets = useSafeAreaInsets();
 
   // Seeded once from the note. Later refetches (triggered by autosave itself) keep updating
   // `note` for the metadata, but must not overwrite what the user is typing.
@@ -185,9 +197,17 @@ function NoteEditor({ note }: { note: NoteListItem }) {
           visible={menuOpen}
           onDismiss={() => setMenuOpen(false)}
           anchor={
-            <Appbar.Action icon="dots-vertical" onPress={() => setMenuOpen(true)} accessibilityLabel={t('common.more')} />
+            <Appbar.Action
+              icon="dots-vertical"
+              onPress={() => setMenuOpen(true)}
+              accessibilityLabel={t('common.more')}
+            />
           }>
-          <Menu.Item leadingIcon="folder-outline" title={t('editor.folder')} onPress={() => openPicker('folder')} />
+          <Menu.Item
+            leadingIcon="folder-outline"
+            title={t('editor.folder')}
+            onPress={() => openPicker('folder')}
+          />
           <Menu.Item leadingIcon="tag-outline" title={t('editor.tags')} onPress={() => openPicker('tags')} />
           <Menu.Item leadingIcon="share-variant-outline" title={t('editor.share')} onPress={openShare} />
           <Menu.Item
@@ -206,7 +226,9 @@ function NoteEditor({ note }: { note: NoteListItem }) {
         onDismiss={markdownTip.dismiss}
       />
       <KeyboardAvoidingView style={styles.container} behavior="padding">
-        <ScrollView keyboardShouldPersistTaps="handled" contentContainerStyle={styles.scroll}>
+        <ScrollView
+          keyboardShouldPersistTaps="handled"
+          contentContainerStyle={{ paddingBottom: 48 + insets.bottom }}>
           <TextInput
             value={title}
             placeholder={t('editor.titlePlaceholder')}
@@ -278,11 +300,7 @@ function NoteEditor({ note }: { note: NoteListItem }) {
         {mode === 'edit' && bodyFocused ? <MarkdownToolbar onFormat={format} /> : null}
       </KeyboardAvoidingView>
 
-      <TagPickerDialog
-        visible={picker === 'tags'}
-        noteIds={[noteId]}
-        onDismiss={() => setPicker(null)}
-      />
+      <TagPickerDialog visible={picker === 'tags'} noteIds={[noteId]} onDismiss={() => setPicker(null)} />
       <FolderPickerDialog
         visible={picker === 'folder'}
         selectedId={note.folderId}
@@ -318,7 +336,6 @@ function NoteEditor({ note }: { note: NoteListItem }) {
 const styles = StyleSheet.create({
   container: { flex: 1 },
   center: { flex: 1, alignItems: 'center', justifyContent: 'center' },
-  scroll: { paddingBottom: 48 },
   title: {
     fontFamily: titleFont,
     fontSize: 26,

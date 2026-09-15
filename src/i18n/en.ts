@@ -65,8 +65,8 @@ export const en: Record<TranslationKey, string> = {
   'editor.shareAs': 'Share as',
   'editor.sharePlain': 'Plain text',
   'editor.sharePlainHint': 'For messages, email and other apps',
-  'editor.shareMarkdown': 'Markdown',
-  'editor.shareMarkdownHint': 'A .md file that keeps the formatting',
+  'editor.shareMarkdown': 'Formatted text',
+  'editor.shareMarkdownHint': 'A file that keeps bold, lists and headings',
   'editor.delete': 'Delete note',
   'editor.noFolder': 'No folder',
   'editor.addTags': 'Add tags',
@@ -159,7 +159,7 @@ export const en: Record<TranslationKey, string> = {
   'tips.listGestures':
     'Long-press a note to select several and pin, move or tag them. Swipe a note sideways to move it to the trash.',
   'tips.editorMarkdown':
-    'Notes support Markdown: the bar above the keyboard adds formatting and the eye at the top shows the result.',
+    'Notes support formatting (bold, lists, headings): the bar above the keyboard applies it and the eye at the top shows the result.',
 
   'date.yesterday': 'yesterday',
 };

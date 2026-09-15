@@ -70,8 +70,8 @@ export const es = {
   'editor.shareAs': 'Compartir como',
   'editor.sharePlain': 'Texto plano',
   'editor.sharePlainHint': 'Para mensajes, correos y otras apps',
-  'editor.shareMarkdown': 'Markdown',
-  'editor.shareMarkdownHint': 'Archivo .md que conserva el formato',
+  'editor.shareMarkdown': 'Texto con formato',
+  'editor.shareMarkdownHint': 'Archivo que conserva negritas, listas y títulos',
   'editor.delete': 'Eliminar nota',
   'editor.noFolder': 'Sin carpeta',
   'editor.addTags': 'Agregar etiquetas',
@@ -164,7 +164,7 @@ export const es = {
   'tips.listGestures':
     'Mantener pulsada una nota permite seleccionar varias para fijarlas, moverlas o etiquetarlas. Deslizarla hacia un costado la envía a la papelera.',
   'tips.editorMarkdown':
-    'El texto admite Markdown: la barra que aparece sobre el teclado da formato y el ojo de arriba muestra cómo queda.',
+    'El texto admite formato (negritas, listas, títulos): la barra que aparece sobre el teclado lo aplica y el ojo de arriba muestra cómo queda.',
 
   'date.yesterday': 'ayer',
 } satisfies Record<string, string>;

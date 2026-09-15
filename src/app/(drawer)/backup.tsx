@@ -3,6 +3,7 @@ import type { DrawerNavigationProp } from 'expo-router/drawer';
 import { useState } from 'react';
 import { ScrollView, StyleSheet, View } from 'react-native';
 import { Appbar, Button, Card, Text } from 'react-native-paper';
+import { useSafeAreaInsets } from 'react-native-safe-area-context';
 
 import { useSnackbar } from '@/components/SnackbarProvider';
 import { exportBackup, importBackup } from '@/db/queries/backup';
@@ -17,6 +18,7 @@ export default function BackupScreen() {
   const theme = useAppTheme();
   const navigation = useNavigation<DrawerNavigationProp<Record<string, object | undefined>>>();
   const showSnackbar = useSnackbar();
+  const insets = useSafeAreaInsets();
   const [busy, setBusy] = useState<'save' | 'share' | 'import' | null>(null);
 
   const runExport = async (target: 'save' | 'share') => {
@@ -67,11 +69,18 @@ export default function BackupScreen() {
   return (
     <View style={[styles.container, { backgroundColor: theme.colors.background }]}>
       <Appbar.Header style={{ backgroundColor: theme.colors.background }}>
-        <Appbar.Action icon="menu" onPress={() => navigation.openDrawer()} accessibilityLabel={t('nav.openMenu')} />
-        <Appbar.Content title={t('nav.backup')} titleStyle={[styles.title, { color: theme.colors.primary }]} />
+        <Appbar.Action
+          icon="menu"
+          onPress={() => navigation.openDrawer()}
+          accessibilityLabel={t('nav.openMenu')}
+        />
+        <Appbar.Content
+          title={t('nav.backup')}
+          titleStyle={[styles.title, { color: theme.colors.primary }]}
+        />
       </Appbar.Header>
 
-      <ScrollView contentContainerStyle={styles.content}>
+      <ScrollView contentContainerStyle={[styles.content, { paddingBottom: 16 + insets.bottom }]}>
         <Card mode="outlined" style={{ backgroundColor: theme.colors.surface }}>
           <Card.Title title={t('backup.exportTitle')} titleStyle={styles.cardTitle} />
           <Card.Content>
