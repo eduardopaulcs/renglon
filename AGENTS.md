@@ -39,6 +39,10 @@ afterwards: the user is using the app, and whatever changes on screen is their d
   use `titleFont`. Transient feedback goes through the app-wide `useSnackbar()`. Folder icons and
   tag colors are stored as keys from `src/lib/appearance.ts`, never as raw icon names or hex
   values; the theme maps each tag color to its light and dark variant (`tagColors`).
+- **Tips**: one-time hints use `useTip` (`src/services/tips.ts`) with `TipBanner`. Whether a tip
+  was seen is stored in `expo-sqlite/kv-store`, not in the notes database, so backups and
+  migrations never touch it. A tip is dismissed with its button or by using the feature it
+  describes.
 - **UI strings**: always through `t()` / `tp()` from `src/i18n`, never hardcoded. The app follows
   the phone language: English for English, Spanish for everything else. Add keys to `es.ts`
   first; `en.ts` is typed against it, so a missing translation fails the typecheck. Spanish copy

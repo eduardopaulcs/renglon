@@ -5,20 +5,28 @@ import { FolderIconPicker } from '@/components/AppearancePicker';
 import { ConfirmDialog } from '@/components/ConfirmDialog';
 import { NameDialog } from '@/components/NameDialog';
 import { NotesScreen } from '@/components/NotesScreen';
+import { TipBanner } from '@/components/TipBanner';
 import { useLiveData } from '@/db/live';
 import { deleteFolder, getFolder, updateFolder } from '@/db/queries/folders';
 import { t } from '@/i18n';
+import { useTip } from '@/services/tips';
 
 export default function FolderScreen() {
   const { id } = useLocalSearchParams<{ id: string }>();
   const folderId = Number(id);
   const folder = useLiveData(() => getFolder(folderId), ['folders'], [folderId]);
   const [dialog, setDialog] = useState<'edit' | 'delete' | null>(null);
+  const iconTip = useTip('folderIcon');
 
   // `undefined` means still loading; `null` means the folder no longer exists.
   useEffect(() => {
     if (folder === null) router.replace('/');
   }, [folder]);
+
+  const openEdit = () => {
+    iconTip.dismiss();
+    setDialog('edit');
+  };
 
   return (
     <>
@@ -27,9 +35,18 @@ export default function FolderScreen() {
         folderId={folderId}
         emptyText={t('notes.emptyFolder')}
         menu={[
-          { label: t('folders.edit'), onPress: () => setDialog('edit') },
+          { label: t('folders.edit'), onPress: openEdit },
           { label: t('folders.delete'), onPress: () => setDialog('delete') },
         ]}
+        banner={
+          <TipBanner
+            visible={iconTip.visible}
+            icon="shape-outline"
+            text={t('tips.folderIcon')}
+            action={{ label: t('tips.folderIconAction'), onPress: openEdit }}
+            onDismiss={iconTip.dismiss}
+          />
+        }
       />
       <NameDialog
         visible={dialog === 'edit'}

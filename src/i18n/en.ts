@@ -146,5 +146,16 @@ export const en: Record<TranslationKey, string> = {
   'color.brown': 'Brown',
   'color.gray': 'Gray',
 
+  'tips.gotIt': 'Got it',
+  'tips.folderIcon': 'Each folder can have its own icon. Pick one by editing the folder from the ⋮ menu.',
+  'tips.folderIconAction': 'Edit folder',
+  'tips.tagColor':
+    'Each tag can have a color, shown on notes and in the side menu. Pick one by editing the tag from the ⋮ menu.',
+  'tips.tagColorAction': 'Edit tag',
+  'tips.listGestures':
+    'Long-press a note to select several and pin, move or tag them. Swipe a note sideways to move it to the trash.',
+  'tips.editorMarkdown':
+    'Notes support Markdown: the bar above the keyboard adds formatting and the eye at the top shows the result.',
+
   'date.yesterday': 'yesterday',
 };

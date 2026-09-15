@@ -1,7 +1,7 @@
 import * as Haptics from 'expo-haptics';
 import { router, useFocusEffect, useNavigation } from 'expo-router';
 import type { DrawerNavigationProp } from 'expo-router/drawer';
-import { useCallback, useEffect, useState } from 'react';
+import { useCallback, useEffect, useState, type ReactNode } from 'react';
 import { BackHandler, FlatList, StyleSheet, View } from 'react-native';
 import { Appbar, FAB, Menu, Searchbar } from 'react-native-paper';
 import Animated, { useAnimatedStyle, useSharedValue, withTiming } from 'react-native-reanimated';
@@ -22,6 +22,7 @@ import {
 } from '@/db/queries/notes';
 import { listTags } from '@/db/queries/tags';
 import { t, tp } from '@/i18n';
+import { useTip } from '@/services/tips';
 import { titleFont, useAppTheme } from '@/theme';
 
 import { EmptyState } from './EmptyState';
@@ -31,6 +32,7 @@ import { NoteFilters, type FolderFilter } from './NoteFilters';
 import { useSnackbar, useSnackbarOffset } from './SnackbarProvider';
 import { SwipeToTrash } from './SwipeToTrash';
 import { TagPickerDialog } from './TagPickerDialog';
+import { TipBanner } from './TipBanner';
 
 export interface ScreenMenuItem {
   label: string;
@@ -43,6 +45,10 @@ interface NotesScreenProps {
   tagId?: number;
   emptyText: string;
   menu?: ScreenMenuItem[];
+  /** A hint from the screen, shown above the list. */
+  banner?: ReactNode;
+  /** Shows the one-time tip about long-pressing and swiping notes. */
+  showGestureTip?: boolean;
 }
 
 type DrawerNavigation = DrawerNavigationProp<Record<string, object | undefined>>;
@@ -55,7 +61,7 @@ const FAB_BOTTOM = 28;
  * screen, or while filters are on, start inside that folder and with those tags, so they do not
  * vanish from the list the user was looking at.
  */
-export function NotesScreen({ title, folderId, tagId, emptyText, menu }: NotesScreenProps) {
+export function NotesScreen({ title, folderId, tagId, emptyText, menu, banner, showGestureTip }: NotesScreenProps) {
   const theme = useAppTheme();
   const navigation = useNavigation<DrawerNavigation>();
   const showSnackbar = useSnackbar();
@@ -67,6 +73,7 @@ export function NotesScreen({ title, folderId, tagId, emptyText, menu }: NotesSc
   const [menuOpen, setMenuOpen] = useState(false);
   const [moving, setMoving] = useState(false);
   const [tagging, setTagging] = useState(false);
+  const gestureTip = useTip('listGestures');
 
   const folders = useLiveData(listFolders, ['folders'], []) ?? [];
   const allTags = useLiveData(listTags, ['tags'], []) ?? [];
@@ -145,6 +152,7 @@ export function NotesScreen({ title, folderId, tagId, emptyText, menu }: NotesSc
   );
 
   const trash = (ids: number[]) => {
+    gestureTip.dismiss();
     trashNotes(ids);
     setSelection(new Set());
     showSnackbar(tp('notes.trashed', ids.length), { label: t('common.undo'), onPress: () => restoreNotes(ids) });
@@ -179,6 +187,7 @@ export function NotesScreen({ title, folderId, tagId, emptyText, menu }: NotesSc
   };
 
   const startSelection = (note: NoteListItem) => {
+    gestureTip.dismiss();
     void Haptics.selectionAsync();
     toggle(note.id);
   };
@@ -268,6 +277,15 @@ export function NotesScreen({ title, folderId, tagId, emptyText, menu }: NotesSc
         tagIds={activeTagFilter}
         onTagIdsChange={setTagFilter}
       />
+      {banner}
+      {showGestureTip ? (
+        <TipBanner
+          visible={gestureTip.visible && notes.length > 0 && !selecting}
+          icon="gesture-tap-hold"
+          text={t('tips.listGestures')}
+          onDismiss={gestureTip.dismiss}
+        />
+      ) : null}
       <FlatList
         data={notes}
         keyExtractor={(note) => String(note.id)}

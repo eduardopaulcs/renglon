@@ -151,6 +151,17 @@ export const es = {
   'color.brown': 'Marrón',
   'color.gray': 'Gris',
 
+  'tips.gotIt': 'Entendido',
+  'tips.folderIcon': 'Cada carpeta puede tener su propio ícono. Se elige al editarla desde el menú ⋮.',
+  'tips.folderIconAction': 'Editar carpeta',
+  'tips.tagColor':
+    'Cada etiqueta puede tener un color, que se ve en las notas y en el menú lateral. Se elige al editarla desde el menú ⋮.',
+  'tips.tagColorAction': 'Editar etiqueta',
+  'tips.listGestures':
+    'Mantener pulsada una nota permite seleccionar varias para fijarlas, moverlas o etiquetarlas. Deslizarla hacia un costado la envía a la papelera.',
+  'tips.editorMarkdown':
+    'El texto admite Markdown: la barra que aparece sobre el teclado da formato y el ojo de arriba muestra cómo queda.',
+
   'date.yesterday': 'ayer',
 } satisfies Record<string, string>;
 

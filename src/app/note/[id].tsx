@@ -9,6 +9,7 @@ import { MarkdownToolbar } from '@/components/MarkdownToolbar';
 import { RuledEditor } from '@/components/RuledEditor';
 import { useSnackbar } from '@/components/SnackbarProvider';
 import { TagPickerDialog } from '@/components/TagPickerDialog';
+import { TipBanner } from '@/components/TipBanner';
 import { useLiveData } from '@/db/live';
 import {
   deleteNotesForever,
@@ -31,6 +32,7 @@ import {
   type TextSelection,
 } from '@/lib/markdown';
 import { shareTextFile } from '@/services/files';
+import { useTip } from '@/services/tips';
 import { tagColors, titleFont, useAppTheme } from '@/theme';
 
 const AUTOSAVE_DELAY_MS = 600;
@@ -75,6 +77,7 @@ function NoteEditor({ note }: { note: NoteListItem }) {
   const [selection, setSelection] = useState<TextSelection>({ start: 0, end: 0 });
   const [forcedSelection, setForcedSelection] = useState<TextSelection>();
   const bodyRef = useRef<TextInput>(null);
+  const markdownTip = useTip('editorMarkdown');
 
   // The exit handler runs on unmount, when state is no longer reachable, so it reads these refs.
   const latest = useRef({ title: note.title, body: note.body, tagCount: note.tags.length });
@@ -115,6 +118,7 @@ function NoteEditor({ note }: { note: NoteListItem }) {
   );
 
   const format = (kind: FormatKind) => {
+    markdownTip.dismiss();
     const result = applyFormat(body, selection, kind);
     setBody(result.text);
     setSelection(result.selection);
@@ -171,7 +175,10 @@ function NoteEditor({ note }: { note: NoteListItem }) {
         />
         <Appbar.Action
           icon={mode === 'edit' ? 'eye-outline' : 'pencil-outline'}
-          onPress={() => setMode(mode === 'edit' ? 'preview' : 'edit')}
+          onPress={() => {
+            markdownTip.dismiss();
+            setMode(mode === 'edit' ? 'preview' : 'edit');
+          }}
           accessibilityLabel={mode === 'edit' ? t('editor.preview') : t('editor.edit')}
         />
         <Menu
@@ -192,6 +199,12 @@ function NoteEditor({ note }: { note: NoteListItem }) {
         </Menu>
       </Appbar.Header>
 
+      <TipBanner
+        visible={markdownTip.visible && mode === 'edit'}
+        icon="language-markdown-outline"
+        text={t('tips.editorMarkdown')}
+        onDismiss={markdownTip.dismiss}
+      />
       <KeyboardAvoidingView style={styles.container} behavior="padding">
         <ScrollView keyboardShouldPersistTaps="handled" contentContainerStyle={styles.scroll}>
           <TextInput
