@@ -40,10 +40,18 @@ App de bloc de notas para Android. Expo + React Native + TypeScript, datos 100% 
 
 - `JAVA_HOME` apunta al JBR de Android Studio (JDK 25). Sirve porque Gradle 9.3 lo soporta.
   El JDK del sistema es 26 y **no** funciona con AGP.
-- `JAVA_TOOL_OPTIONS` apunta a un truststore propio en `%LOCALAPPDATA%\Android\java-tls\`.
-  Es necesario porque el escaneo SSL de AVG intercepta TLS y Java, que no usa el almacen de
-  certificados de Windows, rechaza la cadena. Sin esto, Gradle y sdkmanager fallan con
-  `PKIX path building failed`.
+- La configuracion critica de Gradle vive en **`~/.gradle/gradle.properties`**, no en el repo:
+  es especifica de esta maquina y ademas sobrevive a `expo prebuild`. Contiene dos flags que
+  resuelven fallos no obvios:
+  - `--enable-native-access=ALL-UNNAMED`: JNA (usado por AGP) llama a `System.load`, y bajo
+    JDK 25 eso escribe un warning por stderr. AGP lee el stderr de sus tareas de CMake y lo
+    toma como fallo, con lo cual el build muere en `configureCMakeDebug` mostrando el warning
+    como si fuera el error.
+  - `-Djavax.net.ssl.trustStore=...`: el Web/Mail Shield de AVG intercepta TLS con su propia
+    CA. Windows confia en ella, Java no, y toda descarga falla con `PKIX path building failed`.
+    El truststore en `%LOCALAPPDATA%\Android\java-tls\` es el cacerts del JDK mas esa CA.
+- **No usar `JAVA_TOOL_OPTIONS`** para esto: lo hereda todo JVM hijo y le antepone un
+  "Picked up JAVA_TOOL_OPTIONS" a stderr, que es justo lo que descompone el parseo de AGP.
 
 ## Convenciones
 

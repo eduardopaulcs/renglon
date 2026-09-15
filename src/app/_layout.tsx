@@ -6,7 +6,8 @@ import { StyleSheet, View, useColorScheme } from 'react-native';
 import { ActivityIndicator, PaperProvider, Text } from 'react-native-paper';
 
 import migrations from '@/../drizzle/migrations';
-import { sqliteDb } from '@/db/client';
+// Importar `db` ya carga src/db/client, que al evaluarse abre la conexion y
+// aplica los PRAGMAs (foreign_keys, WAL). No hace falta importar nada mas.
 import { db } from '@/db/client';
 import { darkTheme, lightTheme } from '@/theme';
 
@@ -61,10 +62,6 @@ export default function RootLayout() {
     </PaperProvider>
   );
 }
-
-// Referencia explicita para que el bundler no crea que sqliteDb es codigo muerto:
-// abrir la conexion tiene efectos (PRAGMAs) que deben ocurrir al arrancar.
-void sqliteDb;
 
 const styles = StyleSheet.create({
   center: { flex: 1, alignItems: 'center', justifyContent: 'center', padding: 24, gap: 8 },
