@@ -3,6 +3,8 @@ import { Button, Dialog, HelperText, Portal, TextInput } from 'react-native-pape
 
 import { t } from '@/i18n';
 
+import { useValueWhileVisible } from './useValueWhileVisible';
+
 interface NameDialogProps {
   visible: boolean;
   title: string;
@@ -18,14 +20,28 @@ interface NameDialogProps {
 }
 
 export function NameDialog({ visible, title, onDismiss, ...form }: NameDialogProps) {
+  const shownTitle = useValueWhileVisible(title, visible);
+  const error = useValueWhileVisible(form.error ?? null, visible);
+  const initialValue = useValueWhileVisible(form.initialValue ?? '', visible);
+  const initialOption = useValueWhileVisible(form.initialOption ?? null, visible);
+
   return (
     <Portal>
       <Dialog visible={visible} onDismiss={onDismiss}>
-        <Dialog.Title>{title}</Dialog.Title>
-        {/* Remounting on every open starts from the current values instead of the last typed ones. */}
-        {visible ? (
-          <NameForm key={`${form.initialValue ?? ''}|${form.initialOption ?? ''}`} onDismiss={onDismiss} {...form} />
-        ) : null}
+        <Dialog.Title>{shownTitle}</Dialog.Title>
+        {/*
+          The form stays mounted while the dialog fades out, so its field and buttons do not vanish
+          mid-animation. Paper unmounts the dialog content once it is hidden, so every open starts
+          from the current values anyway; the key covers them changing while it is open.
+        */}
+        <NameForm
+          key={`${initialValue}|${initialOption ?? ''}`}
+          {...form}
+          initialValue={initialValue}
+          initialOption={initialOption}
+          error={error}
+          onDismiss={onDismiss}
+        />
       </Dialog>
     </Portal>
   );

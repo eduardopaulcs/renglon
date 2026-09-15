@@ -5,8 +5,11 @@ import { Button, Checkbox, Dialog, List, Portal, Text, TextInput } from 'react-n
 import { useLiveData } from '@/db/live';
 import { addTagToNotes, countTagsOnNotes, removeTagFromNotes } from '@/db/queries/notes';
 import { createTag, listTags } from '@/db/queries/tags';
+import type { Tag } from '@/db/schema';
 import { t } from '@/i18n';
 import { tagColors, useAppTheme } from '@/theme';
+
+import { useValueWhileVisible } from './useValueWhileVisible';
 
 interface TagPickerDialogProps {
   visible: boolean;
@@ -14,6 +17,9 @@ interface TagPickerDialogProps {
   noteIds: number[];
   onDismiss: () => void;
 }
+
+const sameIds = (a: number[], b: number[]) =>
+  a.length === b.length && a.every((id, index) => id === b[index]);
 
 /**
  * Same layout as `FolderPickerDialog`: type to filter, and a "Create tag" row appears when the
@@ -24,10 +30,39 @@ interface TagPickerDialogProps {
  * the tag to all of them.
  */
 export function TagPickerDialog({ visible, noteIds, onDismiss }: TagPickerDialogProps) {
-  const theme = useAppTheme();
+  // Closing the bulk dialog clears the selection; without holding the ids, every checkbox would
+  // turn unchecked while the dialog fades out.
+  const shownNoteIds = useValueWhileVisible(noteIds, visible, sameIds);
+  // Loaded out here, where it survives between opens, so the list is never empty for a frame.
   const allTags = useLiveData(listTags, ['tags'], []) ?? [];
-  // Keyed by the ids' contents: callers pass a fresh array on every render.
-  const counts = useLiveData(() => countTagsOnNotes(noteIds), ['note_tags'], [noteIds.join(',')]);
+  const counts = useLiveData(() => countTagsOnNotes(shownNoteIds), ['note_tags'], [shownNoteIds.join(',')]);
+
+  return (
+    <Portal>
+      <Dialog visible={visible} onDismiss={onDismiss}>
+        <TagPickerContent allTags={allTags} counts={counts} noteIds={shownNoteIds} onDismiss={onDismiss} />
+      </Dialog>
+    </Portal>
+  );
+}
+
+/**
+ * Holds the search text. It lives inside the dialog, which unmounts it once it has faded out, so
+ * every open starts with an empty search without clearing it on close, when the list would
+ * visibly jump back to its full length.
+ */
+function TagPickerContent({
+  allTags,
+  counts,
+  noteIds,
+  onDismiss,
+}: {
+  allTags: Tag[];
+  counts: Map<number, number> | undefined;
+  noteIds: number[];
+  onDismiss: () => void;
+}) {
+  const theme = useAppTheme();
   const [query, setQuery] = useState('');
 
   const trimmed = query.trim();
@@ -52,63 +87,56 @@ export function TagPickerDialog({ visible, noteIds, onDismiss }: TagPickerDialog
     setQuery('');
   };
 
-  const close = () => {
-    setQuery('');
-    onDismiss();
-  };
-
   return (
-    <Portal>
-      <Dialog visible={visible} onDismiss={close}>
-        <Dialog.Title>{t('tags.pick')}</Dialog.Title>
-        <Dialog.Content>
-          <TextInput
-            mode="outlined"
-            dense
-            value={query}
-            placeholder={t('tags.searchOrCreate')}
-            onChangeText={setQuery}
-            onSubmitEditing={submit}
-            left={<TextInput.Icon icon="tag-outline" />}
-          />
-        </Dialog.Content>
-        <Dialog.ScrollArea style={styles.scrollArea}>
-          <ScrollView keyboardShouldPersistTaps="handled">
-            {trimmed && !exactMatch ? (
-              <List.Item
-                title={t('tags.createInline', { name: trimmed })}
-                left={(props) => <List.Icon {...props} icon="plus" />}
-                onPress={submit}
-              />
-            ) : null}
-            {visibleTags.map((tag) => (
-              <List.Item
-                key={tag.id}
-                title={tag.name}
-                titleNumberOfLines={1}
-                onPress={() => toggle(tag.id)}
-                left={(props) => (
-                  <List.Icon
-                    {...props}
-                    icon={tag.color ? 'tag' : 'tag-outline'}
-                    color={tag.color ? tagColors(theme, tag.color).dot : props.color}
-                  />
-                )}
-                right={() => <Checkbox.Android status={statusOf(tag.id)} onPress={() => toggle(tag.id)} />}
-              />
-            ))}
-            {allTags.length === 0 && !trimmed ? (
-              <Text variant="bodyMedium" style={styles.empty}>
-                {t('tags.none')}
-              </Text>
-            ) : null}
-          </ScrollView>
-        </Dialog.ScrollArea>
-        <Dialog.Actions>
-          <Button onPress={close}>{t('common.close')}</Button>
-        </Dialog.Actions>
-      </Dialog>
-    </Portal>
+    <>
+      <Dialog.Title>{t('tags.pick')}</Dialog.Title>
+      <Dialog.Content>
+        <TextInput
+          mode="outlined"
+          dense
+          value={query}
+          placeholder={t('tags.searchOrCreate')}
+          onChangeText={setQuery}
+          onSubmitEditing={submit}
+          left={<TextInput.Icon icon="tag-outline" />}
+        />
+      </Dialog.Content>
+      <Dialog.ScrollArea style={styles.scrollArea}>
+        <ScrollView keyboardShouldPersistTaps="handled">
+          {trimmed && !exactMatch ? (
+            <List.Item
+              title={t('tags.createInline', { name: trimmed })}
+              left={(props) => <List.Icon {...props} icon="plus" />}
+              onPress={submit}
+            />
+          ) : null}
+          {visibleTags.map((tag) => (
+            <List.Item
+              key={tag.id}
+              title={tag.name}
+              titleNumberOfLines={1}
+              onPress={() => toggle(tag.id)}
+              left={(props) => (
+                <List.Icon
+                  {...props}
+                  icon={tag.color ? 'tag' : 'tag-outline'}
+                  color={tag.color ? tagColors(theme, tag.color).dot : props.color}
+                />
+              )}
+              right={() => <Checkbox.Android status={statusOf(tag.id)} onPress={() => toggle(tag.id)} />}
+            />
+          ))}
+          {allTags.length === 0 && !trimmed ? (
+            <Text variant="bodyMedium" style={styles.empty}>
+              {t('tags.none')}
+            </Text>
+          ) : null}
+        </ScrollView>
+      </Dialog.ScrollArea>
+      <Dialog.Actions>
+        <Button onPress={onDismiss}>{t('common.close')}</Button>
+      </Dialog.Actions>
+    </>
   );
 }
 

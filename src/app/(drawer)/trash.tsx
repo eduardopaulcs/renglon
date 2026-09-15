@@ -38,12 +38,23 @@ export default function TrashScreen() {
   // Counted separately because the list may only hold the first page.
   const trashedCount = useLiveData(countTrashed, ['notes'], []) ?? 0;
 
+  // Whether the dialog is open is kept apart from which note it shows: clearing the note on close
+  // would swap its title for "Untitled" while the dialog is still fading out.
   const [active, setActive] = useState<NoteListItem | null>(null);
+  const [dialogOpen, setDialogOpen] = useState(false);
   const [confirm, setConfirm] = useState<'empty' | 'note' | null>(null);
 
-  const restore = (note: NoteListItem) => {
-    setActive(null);
-    restoreNotes([note.id]);
+  const open = (note: NoteListItem) => {
+    setActive(note);
+    setDialogOpen(true);
+  };
+
+  const close = () => setDialogOpen(false);
+
+  const restore = () => {
+    if (!active) return;
+    close();
+    restoreNotes([active.id]);
     showSnackbar(tp('trash.restored', 1));
   };
 
@@ -81,13 +92,13 @@ export default function TrashScreen() {
             dateLabel={
               item.deletedAt ? t('trash.deletedOn', { date: formatDate(item.deletedAt) }) : undefined
             }
-            onPress={setActive}
+            onPress={open}
           />
         )}
       />
 
       <Portal>
-        <Dialog visible={!!active && confirm === null} onDismiss={() => setActive(null)}>
+        <Dialog visible={dialogOpen && confirm === null} onDismiss={close}>
           <Dialog.Title numberOfLines={1}>{active?.title || t('notes.untitled')}</Dialog.Title>
           {active?.body ? (
             <Dialog.Content>
@@ -96,11 +107,12 @@ export default function TrashScreen() {
               </Text>
             </Dialog.Content>
           ) : null}
-          <Dialog.Actions>
+          <Dialog.Actions style={styles.actions}>
+            <Button onPress={close}>{t('common.cancel')}</Button>
             <Button textColor={theme.colors.error} onPress={() => setConfirm('note')}>
               {t('trash.deleteForever')}
             </Button>
-            <Button onPress={() => active && restore(active)}>{t('trash.restore')}</Button>
+            <Button onPress={restore}>{t('trash.restore')}</Button>
           </Dialog.Actions>
         </Dialog>
       </Portal>
@@ -114,7 +126,7 @@ export default function TrashScreen() {
         onConfirm={() => {
           if (active) deleteNotesForever([active.id]);
           setConfirm(null);
-          setActive(null);
+          close();
           showSnackbar(tp('trash.deleted', 1));
         }}
       />
@@ -140,4 +152,6 @@ const styles = StyleSheet.create({
   title: { fontFamily: titleFont, fontWeight: '600' },
   list: { paddingHorizontal: 16, paddingTop: 8 },
   separator: { height: 10 },
+  // Three actions do not fit on one row on narrow phones.
+  actions: { flexWrap: 'wrap' },
 });
