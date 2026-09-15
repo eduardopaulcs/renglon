@@ -4,13 +4,12 @@ import { setTimeout as sleep } from 'node:timers/promises';
 import { AVD_NAME, findRunningEmulator, listAvds, resolveSdkRoot, sdkTool, tryExec } from './android-env.mjs';
 
 /**
- * Arranca el AVD y NO devuelve el control hasta que el sistema termino de
- * bootear. Es idempotente: si ya hay un emulador corriendo, sale enseguida.
+ * Starts the AVD and does NOT return until the system has finished booting. It is
+ * idempotent: if an emulator is already running, it exits right away.
  *
- * El punto importante es la espera activa del final. `adb devices` reporta el
- * emulador como "device" bastante antes de que Android este realmente listo, y
- * si `expo run:android` instala en esa ventana falla con errores que no apuntan
- * a la causa real.
+ * The important part is the active wait at the end. `adb devices` reports the emulator as
+ * "device" well before Android is actually ready, and if `expo run:android` installs during
+ * that window it fails with errors that do not point to the real cause.
  */
 
 const BOOT_TIMEOUT_MS = 300_000;
@@ -35,7 +34,7 @@ async function waitForBoot(adb, startedAt) {
     const elapsed = Math.floor((Date.now() - startedAt) / 1000);
     if (elapsed - lastReport >= 10) {
       lastReport = elapsed;
-      console.log(`[boot-emulator] esperando boot... ${elapsed}s`);
+      console.log(`[boot-emulator] waiting for boot... ${elapsed}s`);
     }
 
     await sleep(POLL_INTERVAL_MS);
@@ -47,8 +46,8 @@ async function main() {
   const sdkRoot = resolveSdkRoot();
   if (!sdkRoot) {
     fail(
-      'No encuentro el SDK de Android.\n' +
-        'Defini ANDROID_HOME apuntando a tu instalacion (normalmente %LOCALAPPDATA%\\Android\\Sdk).'
+      'Android SDK not found.\n' +
+        'Set ANDROID_HOME to your installation (usually %LOCALAPPDATA%\\Android\\Sdk).'
     );
   }
 
@@ -57,25 +56,25 @@ async function main() {
 
   const alreadyRunning = findRunningEmulator(adb);
   if (alreadyRunning) {
-    console.log(`[boot-emulator] ya hay un emulador corriendo (${alreadyRunning}), no hago nada.`);
+    console.log(`[boot-emulator] an emulator is already running (${alreadyRunning}), nothing to do.`);
     return;
   }
 
   const avds = listAvds(emulator);
   if (!avds.includes(AVD_NAME)) {
     fail(
-      `El AVD "${AVD_NAME}" no existe. Disponibles: ${avds.length ? avds.join(', ') : '(ninguno)'}\n\n` +
-        'Crealo con:\n' +
+      `AVD "${AVD_NAME}" does not exist. Available: ${avds.length ? avds.join(', ') : '(none)'}\n\n` +
+        'Create it with:\n' +
         `  "${sdkRoot}\\cmdline-tools\\latest\\bin\\avdmanager.bat" create avd -n ${AVD_NAME} ` +
         '-k "system-images;android-36;google_apis;x86_64" -d pixel_7'
     );
   }
 
-  console.log(`[boot-emulator] arrancando ${AVD_NAME}...`);
+  console.log(`[boot-emulator] starting ${AVD_NAME}...`);
   const startedAt = Date.now();
 
-  // detached + unref para que el emulador sobreviva a este proceso: si muriera
-  // con el script, el `npm run android` encadenado se quedaria sin dispositivo.
+  // detached + unref so the emulator outlives this process: if it died along with the script,
+  // the chained `npm run android` would be left without a device.
   const child = spawn(emulator, ['-avd', AVD_NAME, '-no-snapshot-save', '-no-boot-anim', '-gpu', 'host'], {
     detached: true,
     stdio: 'ignore',
@@ -85,17 +84,17 @@ async function main() {
   const serial = await waitForBoot(adb, startedAt);
   if (!serial) {
     fail(
-      `El emulador no termino de bootear en ${BOOT_TIMEOUT_MS / 1000}s.\n` +
-        'Causa mas probable: sin aceleracion por hardware. Verifica que la feature\n' +
-        '"HypervisorPlatform" este activada Y que hayas reiniciado despues de activarla.'
+      `The emulator did not finish booting within ${BOOT_TIMEOUT_MS / 1000}s.\n` +
+        'Most likely cause: no hardware acceleration. Check that the "HypervisorPlatform"\n' +
+        'Windows feature is enabled, and run `emulator -accel-check`.'
     );
   }
 
-  // Desbloquea la pantalla; si no, la app se instala pero queda tapada por el lockscreen.
+  // Unlock the screen; otherwise the app installs but stays hidden behind the lock screen.
   tryExec(adb, ['-s', serial, 'shell', 'input', 'keyevent', '82']);
 
   const seconds = Math.round((Date.now() - startedAt) / 1000);
-  console.log(`[boot-emulator] listo: ${serial} (${seconds}s)`);
+  console.log(`[boot-emulator] ready: ${serial} (${seconds}s)`);
 }
 
 main().catch((error) => fail(error.message));

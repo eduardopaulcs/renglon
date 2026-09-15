@@ -17,8 +17,8 @@ export default function NoteEditorScreen() {
   const [loaded, setLoaded] = useState(false);
 
   const saveTimer = useRef<ReturnType<typeof setTimeout> | null>(null);
-  // Se guarda el ultimo valor en una ref para poder volcarlo al desmontar sin
-  // volver a crear el efecto de cierre en cada tecla.
+  // The latest value is kept in a ref so it can be flushed on unmount without recreating the
+  // cleanup effect on every keystroke.
   const pending = useRef({ title: '', body: '' });
 
   useEffect(() => {
@@ -46,8 +46,8 @@ export default function NoteEditorScreen() {
     [noteId]
   );
 
-  // Al salir de la pantalla se descarta el timer y se guarda de inmediato: si no,
-  // los ultimos caracteres tecleados antes de volver atras se perderian.
+  // On leaving the screen the pending timer is cleared and the note is saved immediately;
+  // otherwise the last characters typed before going back would be lost.
   useEffect(
     () => () => {
       if (saveTimer.current) clearTimeout(saveTimer.current);

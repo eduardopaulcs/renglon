@@ -1,34 +1,33 @@
 import { toFtsMatchExpression } from './fts';
 
 describe('toFtsMatchExpression', () => {
-  it('devuelve null si no hay termino util', () => {
+  it('returns null when there is no usable term', () => {
     expect(toFtsMatchExpression('')).toBeNull();
     expect(toFtsMatchExpression('   ')).toBeNull();
   });
 
-  it('cita cada palabra y las une con AND implicito', () => {
-    expect(toFtsMatchExpression('lista super')).toBe('"lista" "super"');
+  it('quotes each word and joins them with an implicit AND', () => {
+    expect(toFtsMatchExpression('shopping list')).toBe('"shopping" "list"');
   });
 
-  it('colapsa espacios repetidos', () => {
-    expect(toFtsMatchExpression('  lista   super  ')).toBe('"lista" "super"');
+  it('collapses repeated whitespace', () => {
+    expect(toFtsMatchExpression('  shopping   list  ')).toBe('"shopping" "list"');
   });
 
-  // Estos son los casos por los que existe el modulo: sin citar, FTS5 los
-  // interpretaria como sintaxis y la consulta tiraria error mientras el
-  // usuario todavia esta tecleando.
+  // These are the cases this module exists for: unquoted, FTS5 would parse them as syntax and
+  // the query would throw while the user is still typing.
   it.each([
-    ['costo-beneficio', '"costo-beneficio"'],
+    ['cost-benefit', '"cost-benefit"'],
     ['NOT', '"NOT"'],
     ['AND', '"AND"'],
-    ['casa*', '"casa*"'],
-    ['(hola)', '"(hola)"'],
-    ['^inicio', '"^inicio"'],
-  ])('neutraliza la sintaxis de FTS5 en %s', (input, expected) => {
+    ['house*', '"house*"'],
+    ['(hello)', '"(hello)"'],
+    ['^start', '"^start"'],
+  ])('neutralizes FTS5 syntax in %s', (input, expected) => {
     expect(toFtsMatchExpression(input)).toBe(expected);
   });
 
-  it('escapa comillas duplicandolas', () => {
-    expect(toFtsMatchExpression('el "grande"')).toBe('"el" """grande"""');
+  it('escapes quotes by doubling them', () => {
+    expect(toFtsMatchExpression('the "big"')).toBe('"the" """big"""');
   });
 });

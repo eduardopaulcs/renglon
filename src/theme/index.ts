@@ -1,9 +1,9 @@
 import { MD3DarkTheme, MD3LightTheme } from 'react-native-paper';
 
 /**
- * Material 3 con un acento propio. Se usan los temas de Paper como base para
- * que la app se vea nativa en cualquier fabricante (Samsung, Motorola, etc.)
- * en lugar de imponer un look propio que desentone con el sistema.
+ * Material 3 with a custom accent. Paper's themes are used as the base so the app looks
+ * native on any manufacturer (Samsung, Motorola, etc.) instead of imposing its own look that
+ * clashes with the system.
  */
 const brand = {
   primary: '#3F6BD6',

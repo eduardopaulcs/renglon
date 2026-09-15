@@ -41,3 +41,13 @@ example
 # generated native folders
 /ios
 /android
+
+# Editor: only the shared project config is versioned; everything else
+# (personal launch.json, tasks.json, etc.) stays on each machine.
+.vscode/*
+!.vscode/extensions.json
+!.vscode/settings.json
+
+# Claude Code: settings.json belongs to the project; settings.local.json holds the
+# permissions approved on this machine and must not travel with the repo.
+.claude/settings.local.json

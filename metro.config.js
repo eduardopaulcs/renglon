@@ -1,8 +1,8 @@
 const { getDefaultConfig } = require('expo/metro-config');
 
 /**
- * Metro tiene que reconocer .sql como source para que inline-import los pueda
- * resolver. La otra mitad del cableado esta en babel.config.js.
+ * Metro has to treat .sql as a source extension so inline-import can resolve those files.
+ * The other half of the wiring lives in babel.config.js.
  */
 const config = getDefaultConfig(__dirname);
 

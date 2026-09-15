@@ -6,8 +6,8 @@ import { StyleSheet, View, useColorScheme } from 'react-native';
 import { ActivityIndicator, PaperProvider, Text } from 'react-native-paper';
 
 import migrations from '@/../drizzle/migrations';
-// Importar `db` ya carga src/db/client, que al evaluarse abre la conexion y
-// aplica los PRAGMAs (foreign_keys, WAL). No hace falta importar nada mas.
+// Importing `db` already loads src/db/client, which opens the connection and applies the
+// PRAGMAs (foreign_keys, WAL) when evaluated. Nothing else needs to be imported.
 import { db } from '@/db/client';
 import { darkTheme, lightTheme } from '@/theme';
 
@@ -17,8 +17,8 @@ export default function RootLayout() {
   const colorScheme = useColorScheme();
   const theme = colorScheme === 'dark' ? darkTheme : lightTheme;
 
-  // Las migraciones corren antes de que cualquier pantalla consulte la base.
-  // Si esto se saltara, la primera query fallaria con "no such table".
+  // Migrations run before any screen queries the database. If this were skipped, the first
+  // query would fail with "no such table".
   const { success, error } = useMigrations(db, migrations);
 
   useEffect(() => {

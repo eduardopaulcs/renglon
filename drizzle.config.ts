@@ -1,8 +1,8 @@
 import type { Config } from 'drizzle-kit';
 
 /**
- * driver: 'expo' hace que drizzle-kit emita migraciones empaquetables por Metro
- * (drizzle/migrations.js) en vez de intentar conectarse a una base real.
+ * driver: 'expo' makes drizzle-kit emit migrations that Metro can bundle
+ * (drizzle/migrations.js) instead of trying to connect to a real database.
  */
 export default {
   dialect: 'sqlite',

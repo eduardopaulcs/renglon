@@ -3,9 +3,8 @@ import { join } from 'node:path';
 import { execFileSync } from 'node:child_process';
 
 /**
- * Resolucion compartida del SDK de Android. Centralizada aca porque
- * boot-emulator y doctor necesitan exactamente las mismas rutas, y duplicarlas
- * es la forma clasica de que se desincronicen.
+ * Shared Android SDK resolution. Centralized here because boot-emulator and doctor need
+ * exactly the same paths, and duplicating them is the classic way for them to drift apart.
  */
 
 export const AVD_NAME = process.env.RENGLON_AVD ?? 'Renglon_API36';
@@ -35,7 +34,7 @@ export function sdkTool(sdkRoot, name) {
   return locations[name];
 }
 
-/** Ejecuta un binario y devuelve stdout, o null si falla. Nunca tira. */
+/** Runs a binary and returns its stdout, or null if it fails. Never throws. */
 export function tryExec(file, args, options = {}) {
   try {
     return execFileSync(file, args, {
@@ -49,9 +48,9 @@ export function tryExec(file, args, options = {}) {
 }
 
 /**
- * Devuelve el serial del primer emulador en estado "device", o null.
- * Ignora los que estan en "offline" o "unauthorized": un emulador a medio
- * arrancar aparece listado pero no acepta instalaciones.
+ * Returns the serial of the first emulator in the "device" state, or null.
+ * Emulators in "offline" or "unauthorized" state are skipped: one that is still booting shows
+ * up in the list but does not accept installs.
  */
 export function findRunningEmulator(adb) {
   const output = tryExec(adb, ['devices']);

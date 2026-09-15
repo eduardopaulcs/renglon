@@ -12,15 +12,15 @@ export default function NotesListScreen() {
   const [term, setTerm] = useState('');
   const [results, setResults] = useState<Note[] | null>(null);
 
-  // useLiveQuery re-ejecuta la consulta cuando cambia la tabla, sin que haya que
-  // refrescar a mano tras crear o editar una nota.
+  // useLiveQuery re-runs the query whenever the table changes, so there is no manual refresh
+  // after creating or editing a note.
   const { data: allNotes } = useLiveQuery(activeNotesQuery);
 
   const notes = results ?? allNotes ?? [];
 
   async function onSearch(value: string) {
     setTerm(value);
-    // Volver a la lista completa apenas se limpia el campo.
+    // Go back to the full list as soon as the field is cleared.
     setResults(value.trim() ? await searchNotes(value) : null);
   }
 

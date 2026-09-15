@@ -8,9 +8,8 @@ import { toFtsMatchExpression } from './fts';
 const now = () => Date.now();
 
 /**
- * Consulta de la pantalla principal. No se ejecuta aca: se devuelve el query
- * para que la pantalla lo pase por useLiveQuery y se re-renderice sola cuando
- * cambie la tabla.
+ * Main screen query. It is not executed here: the query is returned so the screen can pass
+ * it through useLiveQuery and re-render on its own whenever the table changes.
  */
 export const activeNotesQuery = db
   .select()
@@ -46,17 +45,17 @@ export async function updateNote(id: number, values: Partial<Pick<Note, 'title' 
     .where(eq(notes.id, id));
 }
 
-/** Borrado logico: la nota sale de la lista pero se puede recuperar. */
+/** Soft delete: the note leaves the list but can be recovered. */
 export async function trashNote(id: number) {
   await db.update(notes).set({ deletedAt: now(), updatedAt: now() }).where(eq(notes.id, id));
 }
 
 /**
- * Busqueda full-text.
+ * Full-text search.
  *
- * Se filtra por deleted_at aca y no en los triggers a proposito: mantener las
- * notas de la papelera dentro del indice evita tener que reindexar al
- * restaurarlas. El costo es este WHERE extra.
+ * Filtering by deleted_at happens here rather than in the triggers on purpose: keeping
+ * trashed notes in the index avoids reindexing them when they are restored. The cost is
+ * this extra WHERE.
  */
 export async function searchNotes(term: string): Promise<Note[]> {
   const match = toFtsMatchExpression(term);

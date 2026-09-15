@@ -1,7 +1,7 @@
 /**
- * babel-plugin-inline-import convierte los .sql de drizzle/ en strings al
- * empaquetar. Sin esto las migraciones fallan en RUNTIME (no en build), con un
- * error poco claro. Va siempre acompanado de metro.config.js.
+ * babel-plugin-inline-import turns the .sql files in drizzle/ into strings at bundle time.
+ * Without it, migrations fail at RUNTIME (not at build time) with an unhelpful error. It
+ * always goes together with metro.config.js.
  */
 module.exports = function (api) {
   api.cache(true);

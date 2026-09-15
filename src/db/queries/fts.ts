@@ -1,11 +1,10 @@
 /**
- * Traduce lo que escribe el usuario a una expresion MATCH de FTS5.
+ * Turns what the user types into an FTS5 MATCH expression.
  *
- * FTS5 tiene sintaxis propia: `-` niega, `*` es prefijo, `"` delimita frases,
- * y `AND`/`OR`/`NOT` son operadores. Si se pasara el texto crudo, buscar
- * "costo-beneficio" o un parentesis suelto tiraria un error de sintaxis en
- * plena escritura. Por eso cada palabra se cita: dentro de comillas, FTS5
- * trata todo como literal.
+ * FTS5 has its own syntax: `-` negates, `*` is a prefix match, `"` delimits phrases, and
+ * `AND`/`OR`/`NOT` are operators. Passing the raw text through would make a search for
+ * "cost-benefit" or a stray parenthesis throw a syntax error while the user is still typing.
+ * That is why every word is quoted: inside quotes, FTS5 treats everything literally.
  */
 export function toFtsMatchExpression(term: string): string | null {
   const trimmed = term.trim();
@@ -13,13 +12,13 @@ export function toFtsMatchExpression(term: string): string | null {
 
   const words = trimmed
     .split(/\s+/)
-    // Las comillas internas se escapan duplicandolas, como en SQL.
+    // Inner quotes are escaped by doubling them, as in SQL.
     .map((word) => word.replace(/"/g, '""'))
     .filter((word) => word.length > 0)
     .map((word) => `"${word}"`);
 
   if (words.length === 0) return null;
 
-  // Espacio = AND implicito en FTS5: se exigen todas las palabras.
+  // A space is an implicit AND in FTS5: every word is required.
   return words.join(' ');
 }

@@ -1,5 +1,5 @@
-# Normaliza finales de linea: el repo guarda LF, el working copy usa lo nativo.
-# Sin esto, en Windows cada archivo aparece modificado al clonar.
+# Normalize line endings: the repo stores LF, the working copy uses the native ones.
+# Without this, every file shows up as modified after cloning on Windows.
 * text=auto eol=lf
 
 *.png binary
