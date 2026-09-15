@@ -92,14 +92,10 @@ function NoteEditor({ note }: { note: NoteListItem }) {
   const markdownTip = useTip('editorMarkdown');
 
   // The exit handler runs on unmount, when state is no longer reachable, so it reads these refs.
-  const latest = useRef({ title: note.title, body: note.body, tagCount: note.tags.length });
+  const latest = useRef({ title: note.title, body: note.body });
   const edited = useRef(false);
   const skipExitHandling = useRef(false);
   const saveTimer = useRef<ReturnType<typeof setTimeout>>(undefined);
-
-  useEffect(() => {
-    latest.current.tagCount = note.tags.length;
-  }, [note.tags.length]);
 
   const scheduleSave = (next: { title: string; body: string }) => {
     latest.current = { ...latest.current, ...next };
@@ -109,14 +105,15 @@ function NoteEditor({ note }: { note: NoteListItem }) {
   };
 
   // Leaving the screen: flush the pending save and tell the user it happened, or throw away a
-  // note that was left completely empty so it does not clutter the list as "Untitled".
+  // note left without a title or text. A folder or tags alone do not keep it: a note created
+  // from a folder or tag screen starts with them, and there would be nothing to read in it.
   useEffect(
     () => () => {
       clearTimeout(saveTimer.current);
       if (skipExitHandling.current) return;
 
       const current = latest.current;
-      if (!current.title.trim() && !current.body.trim() && current.tagCount === 0) {
+      if (!current.title.trim() && !current.body.trim()) {
         deleteNotesForever([noteId]);
         if (edited.current) showSnackbar(t('editor.discarded'));
         return;

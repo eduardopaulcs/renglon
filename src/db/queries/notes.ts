@@ -22,6 +22,13 @@ export interface NoteFilter {
 
 const now = () => Date.now();
 
+/**
+ * Excludes a note just created with the pencil button and not written in yet. Without it the
+ * note flashes into the list as "Untitled" while the editor opens, then vanishes when the
+ * editor discards it. Typing anything moves updatedAt past createdAt and makes it a regular note.
+ */
+const notUntouchedDraft = sql`not (${notes.title} = '' and ${notes.body} = '' and ${notes.createdAt} = ${notes.updatedAt})`;
+
 function attachMeta(rows: Note[]): NoteListItem[] {
   if (rows.length === 0) return [];
 
@@ -69,7 +76,7 @@ export function listNotes(filter: NoteFilter = {}, limit?: number): NotePage {
   if (filter.ids?.length === 0) return { items: [], hasMore: false };
 
   const conditions: SQL[] = [filter.trashed ? isNotNull(notes.deletedAt) : isNull(notes.deletedAt)];
-  if (!filter.trashed) conditions.push(eq(notes.archived, false));
+  if (!filter.trashed) conditions.push(eq(notes.archived, false), notUntouchedDraft);
   if (filter.folderId === null) conditions.push(isNull(notes.folderId));
   else if (filter.folderId !== undefined) conditions.push(eq(notes.folderId, filter.folderId));
   for (const tagId of filter.tagIds ?? []) {
@@ -136,7 +143,12 @@ export function createNote(values: { folderId?: number | null; tagIds?: number[]
     const timestamp = now();
     const created = tx
       .insert(notes)
-      .values({ uuid: randomUUID(), folderId: values.folderId ?? null, createdAt: timestamp, updatedAt: timestamp })
+      .values({
+        uuid: randomUUID(),
+        folderId: values.folderId ?? null,
+        createdAt: timestamp,
+        updatedAt: timestamp,
+      })
       .returning()
       .get();
 
@@ -229,7 +241,7 @@ export interface NoteCounts {
 }
 
 export function noteCounts(): NoteCounts {
-  const live = and(isNull(notes.deletedAt), eq(notes.archived, false));
+  const live = and(isNull(notes.deletedAt), eq(notes.archived, false), notUntouchedDraft);
 
   const all = db.select({ value: count() }).from(notes).where(live).get()?.value ?? 0;
   const trash = countTrashed();

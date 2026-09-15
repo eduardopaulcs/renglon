@@ -91,6 +91,8 @@ afterwards: the user is using the app, and whatever changes on screen is their d
   already applied the old migrations would try to create the tables again. Once the app is
   published, applied migrations are never edited: every change is a new migration.
 - Deleting notes: soft delete (`deleted_at`) with an Undo snackbar. A hard `DELETE` happens only
-  when deleting forever from the trash, and when discarding a note left completely empty.
+  when deleting forever from the trash, and when discarding a note left without a title or text
+  (a folder or tags alone do not keep it). While that new note is untouched, `listNotes` and
+  `noteCounts` hide it, so it never flashes into a list.
 - Imported files are untrusted: validate them fully (`src/lib/backup-format.ts`) before writing
   anything.
