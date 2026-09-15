@@ -146,6 +146,10 @@ export const en: Record<TranslationKey, string> = {
   'color.brown': 'Brown',
   'color.gray': 'Gray',
 
+  'about.version': 'Version {version}',
+  'about.madeBy': 'Made by {name}',
+  'about.openWebsite': 'Open {site} in the browser',
+
   'tips.gotIt': 'Got it',
   'tips.folderIcon': 'Each folder can have its own icon. Pick one by editing the folder from the ⋮ menu.',
   'tips.folderIconAction': 'Edit folder',

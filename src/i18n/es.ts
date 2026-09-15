@@ -151,6 +151,10 @@ export const es = {
   'color.brown': 'Marrón',
   'color.gray': 'Gris',
 
+  'about.version': 'Versión {version}',
+  'about.madeBy': 'Desarrollada por {name}',
+  'about.openWebsite': 'Abrir {site} en el navegador',
+
   'tips.gotIt': 'Entendido',
   'tips.folderIcon': 'Cada carpeta puede tener su propio ícono. Se elige al editarla desde el menú ⋮.',
   'tips.folderIconAction': 'Editar carpeta',
