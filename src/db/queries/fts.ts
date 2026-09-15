@@ -5,6 +5,9 @@
  * `AND`/`OR`/`NOT` are operators. Passing the raw text through would make a search for
  * "cost-benefit" or a stray parenthesis throw a syntax error while the user is still typing.
  * That is why every word is quoted: inside quotes, FTS5 treats everything literally.
+ *
+ * Each quoted word is then marked as a prefix (`"lec"*`), so results show up while a word is
+ * still half typed instead of only once it is complete.
  */
 export function toFtsMatchExpression(term: string): string | null {
   const trimmed = term.trim();
@@ -15,7 +18,7 @@ export function toFtsMatchExpression(term: string): string | null {
     // Inner quotes are escaped by doubling them, as in SQL.
     .map((word) => word.replace(/"/g, '""'))
     .filter((word) => word.length > 0)
-    .map((word) => `"${word}"`);
+    .map((word) => `"${word}"*`);
 
   if (words.length === 0) return null;
 

@@ -8,7 +8,7 @@ import type { ExpoConfig } from 'expo/config';
  * declared here or it gets lost.
  */
 const config: ExpoConfig = {
-  name: 'Renglon',
+  name: 'Renglón',
   slug: 'renglon',
   version: '1.0.0',
   orientation: 'portrait',
@@ -42,6 +42,7 @@ const config: ExpoConfig = {
 
   plugins: [
     'expo-router',
+    'expo-localization',
     [
       'expo-splash-screen',
       {

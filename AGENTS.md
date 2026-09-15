@@ -18,19 +18,34 @@ This is the instructions file for AI assistants.
 | `npm run db:generate` | Regenerates migrations from `src/db/schema.ts` |
 | `npm run typecheck` | `tsc --noEmit` |
 
+When asked to start or run the app, launch it (`npm run dev`), confirm it is up and stop there.
+Do not keep monitoring it, tapping through screens, taking screenshots or inspecting the database
+afterwards: the user is using the app, and whatever changes on screen is their doing.
+
 ## Architecture
 
-- **Routing**: `expo-router`, file-based routes in `src/app/`.
+- **Routing**: `expo-router`, file-based routes in `src/app/`. `(drawer)/` holds the screens
+  reachable from the side menu (all notes, folder, tag, trash, backup); `note/[id].tsx` is the
+  editor, stacked above the drawer.
 - **Data**: `expo-sqlite` + Drizzle. `src/db/schema.ts` is the source of truth for the schema.
-- **State**: there is no state manager. Drizzle's `useLiveQuery` re-renders when SQLite changes,
-  so the database **is** the state. Do not add Zustand/Redux without a concrete reason: it would
+  Queries live in `src/db/queries/` and are synchronous, because the expo-sqlite driver is.
+  Inside `db.transaction` use `.run()`, `.get()` and `.all()`; an `async` callback breaks it.
+- **State**: there is no state manager. `useLiveData` (`src/db/live.ts`) re-runs a query whenever
+  any of the tables it lists changes, so the database **is** the state. Do not use Drizzle's
+  `useLiveQuery`: it only watches the main table of the query, so a list showing tags goes stale
+  when a tag changes. Do not add Zustand/Redux without a concrete reason either: it would
   duplicate the source of truth.
-- **UI**: `react-native-paper` (Material 3). Themes live in `src/theme/`.
+- **UI**: `react-native-paper` (Material 3) with the "notebook" palette in `src/theme/`. Titles
+  use `titleFont`. Transient feedback goes through the app-wide `useSnackbar()`.
+- **UI strings**: always through `t()` / `tp()` from `src/i18n`, never hardcoded. The app follows
+  the phone language: English for English, Spanish for everything else. Add keys to `es.ts`
+  first; `en.ts` is typed against it, so a missing translation fails the typecheck. Spanish copy
+  avoids second-person verbs so it reads naturally for both "tú" and "vos" speakers.
 
 ## Things that break easily
 
-- **`enableChangeListener`** in `src/db/client.ts` is what makes `useLiveQuery` work. Remove it
-  and notes still save, but the list stops updating.
+- **`enableChangeListener`** in `src/db/client.ts` is what makes `useLiveData` work. Remove it
+  and notes still save, but no screen updates.
 - **`babel.config.js` + `metro.config.js`** are both required to bundle the `.sql` files. If
   either is missing, migrations fail at runtime, not at build time.
 - **FTS5** (`drizzle/0001_notes_fts5.sql`) is hand-written because Drizzle does not model
@@ -63,4 +78,7 @@ This is the instructions file for AI assistants.
   names and commit messages.
 - Comments explain **why**, not what. If the code already says it, do not comment it.
 - Dates in SQLite: epoch-ms integers, never ISO strings.
-- Deleting notes: soft delete (`deleted_at`), never `DELETE`.
+- Deleting notes: soft delete (`deleted_at`) with an Undo snackbar. A hard `DELETE` happens only
+  when deleting forever from the trash, and when discarding a note left completely empty.
+- Imported files are untrusted: validate them fully (`src/lib/backup-format.ts`) before writing
+  anything.
