@@ -4,12 +4,9 @@
 write on, and that is the whole idea: open the app, write on the line, close it. No account, no
 sync, no ads, no network. Your notes live on your phone, in a plain database, and nowhere else.
 
-<p align="center">
-  <img src="docs/screenshots/splash.png" width="210" alt="Splash screen">
-  <img src="docs/screenshots/editor.png" width="210" alt="Note editor on ruled paper, with the formatting bar">
-  <img src="docs/screenshots/notes-list.png" width="210" alt="Note list filtered by a tag">
-  <img src="docs/screenshots/drawer.png" width="210" alt="Side menu with folders, tags, trash and backup">
-</p>
+| <img src="docs/screenshots/splash.png" width="180" alt="Splash screen"> | <img src="docs/screenshots/editor.png" width="180" alt="Note editor on ruled paper, with the formatting bar"> | <img src="docs/screenshots/notes-list.png" width="180" alt="Note list filtered by a tag"> | <img src="docs/screenshots/drawer.png" width="180" alt="Side menu with folders, tags, trash and backup"> |
+| :--: | :--: | :--: | :--: |
+| Opening | Writing | Finding | Organizing |
 
 ## What it does
 
